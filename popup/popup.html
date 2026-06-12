@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FocusGuard</title>
+
+  <!-- Google Fonts — Inter (300–700) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Popup stylesheet -->
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+
+    <!-- ====== HEADER ====== -->
+    <header class="popup-header">
+      <div class="logo-area">
+        <span class="logo-icon">🛡️</span>
+        <h1>FocusGuard</h1>
+      </div>
+      <div class="header-badges" id="header-badges"></div>
+    </header>
+
+    <!-- ====== GOAL PROMPT (overlay — first open, no goal set) ====== -->
+    <section class="goal-prompt" id="goal-prompt">
+      <div class="goal-prompt-inner">
+        <p class="goal-greeting">Hey! 👋</p>
+        <h2>What is your goal for today?</h2>
+        <div class="goal-input-area">
+          <input
+            type="text"
+            id="goal-input"
+            placeholder="e.g., Finish the React project..."
+            autocomplete="off"
+          />
+          <button id="goal-set-btn" class="btn btn-primary">Set Goal</button>
+        </div>
+        <button id="goal-skip-btn" class="btn btn-ghost">Skip for now</button>
+      </div>
+    </section>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <main class="popup-main" id="popup-main">
+      <!-- Task input -->
+      <div class="input-area">
+        <input
+          type="text"
+          id="task-input"
+          placeholder="Add a task..."
+          autocomplete="off"
+        />
+        <button id="add-btn" class="btn btn-add" title="Add task">+</button>
+      </div>
+
+      <!-- Todo list -->
+      <div class="todo-section">
+        <ul class="todo-list" id="todo-list"></ul>
+        <div class="todo-empty" id="todo-empty">
+          <p>No tasks yet. Add one above! ✨</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ====== BREAK CAPTCHA ====== -->
+    <section class="break-section" id="break-section">
+      <div class="break-inner">
+        <h3>Take a Break</h3>
+        <p class="break-desc">Type the text below to prove you really want a break:</p>
+        <div id="captcha-container" class="captcha-container"></div>
+        <input
+          type="text"
+          id="captcha-input"
+          placeholder="Type the text above..."
+          autocomplete="off"
+        />
+        <div class="captcha-actions">
+          <button id="captcha-verify-btn" class="btn btn-primary">Verify</button>
+          <button id="captcha-cancel-btn" class="btn btn-ghost">Cancel</button>
+        </div>
+        <p class="captcha-error" id="captcha-error">Incorrect. Try again!</p>
+      </div>
+    </section>
+
+    <!-- ====== TIMER PICKER (after CAPTCHA success) ====== -->
+    <section class="timer-section" id="timer-section">
+      <div class="timer-inner">
+        <h3>Choose break duration</h3>
+        <div class="timer-options" id="timer-options"></div>
+        <button id="timer-cancel-btn" class="btn btn-ghost">Cancel</button>
+      </div>
+    </section>
+
+    <!-- ====== BREAK ACTIVE COUNTDOWN ====== -->
+    <section class="break-active-section" id="break-active-section">
+      <div class="break-active-inner">
+        <div class="break-timer-ring" id="break-timer-ring">
+          <svg viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#7c3aed" />
+                <stop offset="100%" stop-color="#3b82f6" />
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="60" cy="60" r="54" />
+            <circle
+              class="ring-progress"
+              id="ring-progress"
+              cx="60"
+              cy="60"
+              r="54"
+            />
+          </svg>
+          <div class="timer-display" id="timer-display">15:00</div>
+        </div>
+        <p class="break-status">Break Mode Active</p>
+        <p class="break-status-sub">Enjoy your break! Feeds are unblocked.</p>
+        <button id="end-break-btn" class="btn btn-danger">End Break Early</button>
+      </div>
+    </section>
+
+    <!-- ====== FOOTER ====== -->
+    <footer class="popup-footer" id="popup-footer">
+      <button id="break-btn" class="btn btn-outline" title="Take a break">
+        <span class="btn-icon">☕</span> Take a break
+      </button>
+      <button id="settings-btn" class="btn btn-icon-only" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83
+            2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0
+            0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9
+            19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0
+            1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0
+            0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6
+            9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1
+            2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0
+            1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1
+            1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0
+            1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0
+            1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0
+            0-1.51 1z"/>
+        </svg>
+      </button>
+    </footer>
+
+  </div>
+
+  <!-- Popup logic (ES module) -->
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

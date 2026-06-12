@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusGuard — Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <div class="header-left">
+        <span class="logo-icon">🛡️</span>
+        <div>
+          <h1>FocusGuard Settings</h1>
+          <p class="header-sub">Configure your distraction blocking preferences</p>
+        </div>
+      </div>
+    </header>
+    
+    <main class="settings-main">
+      <!-- YouTube Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <div class="section-icon yt-icon">▶</div>
+          <h2>YouTube</h2>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Block Shorts</h3>
+            <p>Prevent access to YouTube Shorts</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="yt-block-shorts" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Block Home Feed</h3>
+            <p>Block the recommendation-based home feed</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="yt-block-feed" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </section>
+      
+      <!-- Instagram Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <div class="section-icon ig-icon">📷</div>
+          <h2>Instagram</h2>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Block Reels</h3>
+            <p>Prevent access to Instagram Reels</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="ig-block-reels" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Block Home Feed</h3>
+            <p>Block the recommendation-based home feed</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="ig-block-feed" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </section>
+      
+      <!-- Break Settings -->
+      <section class="settings-section">
+        <div class="section-header">
+          <div class="section-icon break-icon">☕</div>
+          <h2>Break Settings</h2>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Enable Break Button</h3>
+            <p>Allow taking controlled breaks via the popup</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="break-enabled" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Maximum Break Duration</h3>
+            <p>Set the maximum allowed break time</p>
+          </div>
+          <div class="range-control">
+            <input type="range" id="break-max" min="5" max="30" step="5" value="15" />
+            <span class="range-value" id="break-max-value">15 min</span>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Advanced Settings -->
+      <section class="settings-section">
+        <div class="section-header">
+          <div class="section-icon adv-icon">⚡</div>
+          <h2>Advanced</h2>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h3>Goal Inference</h3>
+            <p>Automatically detect your work goals from recent browsing activity. Uses the tabs permission to analyze your open tabs.</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="goal-inference" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </section>
+      
+      <!-- Save indicator -->
+      <div class="save-indicator" id="save-indicator">
+        <span>✓</span> Settings saved
+      </div>
+    </main>
+    
+    <footer class="settings-footer">
+      <p>FocusGuard v1.0.0 — Your focus, your rules.</p>
+    </footer>
+  </div>
+  <script type="module" src="settings.js"></script>
+</body>
+</html>
