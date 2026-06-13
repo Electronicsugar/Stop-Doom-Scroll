@@ -65,14 +65,14 @@ input { font-family: inherit; }
 
 /* ====== POPUP CONTAINER ====== */
 .popup-container {
-  width: 380px;
-  min-height: 520px;
-  max-height: 580px;
+  width: 320px;
+  min-height: 360px;
+  max-height: 460px;
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.45;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -84,26 +84,27 @@ input { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
+  height: 36px;
 }
 
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
 }
 
 .logo-icon {
-  font-size: 22px;
+  font-size: 14px;
   line-height: 1;
 }
 
-.logo-area h1 {
-  font-size: 18px;
+.logo-mark {
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   background-clip: text;
@@ -120,10 +121,10 @@ input { font-family: inherit; }
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 3px;
+  font-size: 10px;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 2px 7px;
   border-radius: var(--radius-pill);
   letter-spacing: 0.2px;
   animation: scaleIn var(--speed) var(--ease);
@@ -192,13 +193,13 @@ input { font-family: inherit; }
 
 /* ====== GLOBAL INPUT STYLES ====== */
 input[type="text"] {
-  height: 42px;
-  padding: 0 16px;
+  height: 32px;
+  padding: 0 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-input);
+  border-radius: 6px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 12px;
   outline: none;
   transition: all var(--speed) var(--ease);
 }
@@ -220,13 +221,13 @@ input[type="text"]:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 20px;
+  height: 32px;
+  padding: 0 14px;
   background: var(--accent-gradient);
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  border-radius: var(--radius-btn);
+  border-radius: 6px;
   transition: all var(--speed) var(--ease);
   white-space: nowrap;
 }
@@ -247,12 +248,12 @@ input[type="text"]:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 0 16px;
+  height: 28px;
+  padding: 0 10px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
-  border-radius: var(--radius-btn);
+  border-radius: 6px;
   transition: all var(--speed) var(--ease);
 }
 
@@ -266,14 +267,14 @@ input[type="text"]:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 16px;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
   background: transparent;
   border: 1px solid var(--border-highlight);
-  border-radius: var(--radius-btn);
+  border-radius: 6px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   transition: all var(--speed) var(--ease);
 }
@@ -285,7 +286,7 @@ input[type="text"]:focus {
 }
 
 .btn-outline .btn-icon {
-  font-size: 15px;
+  font-size: 13px;
 }
 
 /* — Danger — */
@@ -293,14 +294,14 @@ input[type="text"]:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 24px;
+  height: 30px;
+  padding: 0 16px;
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: var(--danger);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  border-radius: var(--radius-btn);
+  border-radius: 6px;
   transition: all var(--speed) var(--ease);
 }
 
@@ -312,13 +313,13 @@ input[type="text"]:focus {
 
 /* — Add (circular gradient) — */
 .btn-add {
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
-  border-radius: var(--radius-input);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 6px;
   background: var(--accent-gradient);
   color: #fff;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 400;
   display: flex;
   align-items: center;
@@ -339,12 +340,12 @@ input[type="text"]:focus {
 
 /* — Icon only (settings cog) — */
 .btn-icon-only {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-btn);
+  border-radius: 6px;
   color: var(--text-secondary);
   transition: all var(--speed) var(--ease);
 }
@@ -371,8 +372,8 @@ input[type="text"]:focus {
 /* --- Input area --- */
 .input-area {
   display: flex;
-  gap: 10px;
-  padding: 16px 20px 12px;
+  gap: 6px;
+  padding: 8px 12px 6px;
   flex-shrink: 0;
 }
 
@@ -384,7 +385,7 @@ input[type="text"]:focus {
 .todo-section {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 20px 12px;
+  padding: 2px 12px 6px;
   min-height: 0;
 }
 
@@ -392,9 +393,9 @@ input[type="text"]:focus {
 .todo-empty {
   display: none;
   text-align: center;
-  padding: 40px 20px;
+  padding: 24px 12px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .todo-empty.active {
@@ -406,9 +407,9 @@ input[type="text"]:focus {
 .todo-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-input);
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 6px;
   transition: background var(--speed) var(--ease);
   animation: slideIn 0.3s var(--ease) both;
 }
@@ -427,9 +428,9 @@ input[type="text"]:focus {
 /* --- Custom checkbox --- */
 .todo-checkbox {
   position: relative;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -449,7 +450,7 @@ input[type="text"]:focus {
 .todo-checkbox .checkmark {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1.5px solid var(--border-highlight);
   background: transparent;
   transition: all var(--speed) var(--ease);
@@ -465,12 +466,12 @@ input[type="text"]:focus {
   content: '';
   position: absolute;
   display: none;
-  left: 6px;
-  top: 3px;
-  width: 5px;
-  height: 9px;
+  left: 4.5px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
   border: solid #fff;
-  border-width: 0 2px 2px 0;
+  border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
   animation: checkmark 0.2s var(--ease);
 }
@@ -483,15 +484,15 @@ input[type="text"]:focus {
 .todo-goal-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 10px;
+  gap: 2px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 1px 5px;
   border-radius: var(--radius-pill);
   background: var(--accent-gradient);
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -499,7 +500,7 @@ input[type="text"]:focus {
 /* --- Todo text --- */
 .todo-text {
   flex: 1;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -521,11 +522,11 @@ input[type="text"]:focus {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  border-radius: 6px;
-  font-size: 16px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 4px;
+  font-size: 14px;
   color: var(--text-muted);
   transition: all var(--speed) var(--ease);
   flex-shrink: 0;
@@ -791,7 +792,7 @@ input[type="text"]:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 6px 12px;
   border-top: 1px solid var(--border-default);
   flex-shrink: 0;
 }
