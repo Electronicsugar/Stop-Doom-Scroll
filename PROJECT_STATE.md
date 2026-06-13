@@ -18,7 +18,8 @@ The initial version (v1.0.0) of FocusGuard has been built. The core architecture
 - None currently. Waiting for manual verification.
 
 ## Known Bugs
-- None identified yet (pending extensive manual testing).
+- **[FIXED]** Goal inference never extracted actual search queries from URLs — now uses 3-tier strategy (search query → cleaned title → domain topic).
+- **[FIXED]** Todo fallback in `getReminderMessage()` always picked the first item; now picks randomly.
 
 ## Pending Tasks
 - **Icon Generation**: The current icons are duplicates of a single high-res image. Need to be properly resized to 16x16, 32x32, 48x48, 128x128 pixels.

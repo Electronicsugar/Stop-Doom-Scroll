@@ -11,7 +11,7 @@
 
 import {
   MSG, STORAGE_KEYS, SITE, PAGE_TYPE,
-  INFERENCE_KEYWORDS, REMINDERS, DEFAULT_SETTINGS,
+  INFERENCE_KEYWORDS, SEARCH_QUERY_PARAMS, REMINDERS, DEFAULT_SETTINGS,
 } from '../lib/constants.js';
 
 import {
@@ -106,39 +106,133 @@ function safeSendToTab(tabId, message) {
 //  GOAL INFERENCE ENGINE
 // ============================================================
 
+/**
+ * Extracts the search query string from a URL, if the URL is from a known
+ * search engine. Returns null if the URL is not a recognized search page.
+ * This is O(number of known engines) — effectively O(1).
+ */
+function _extractSearchQuery(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, '');
+    for (const [engineHost, param] of Object.entries(SEARCH_QUERY_PARAMS)) {
+      if (hostname === engineHost || hostname.endsWith('.' + engineHost)) {
+        const query = parsed.searchParams.get(param);
+        if (query) {
+          // Normalize: collapse whitespace, trim, cap length at 80 chars
+          return query.replace(/\s+/g, ' ').trim().slice(0, 80);
+        }
+      }
+    }
+  } catch {
+    // Malformed URL — skip
+  }
+  return null;
+}
+
+// Site name suffixes to strip when cleaning page titles for Tier 2 inference.
+const _TITLE_SUFFIXES = [
+  ' - YouTube', ' | YouTube', ' — YouTube',
+  ' - Google Search', ' | Google', ' — Google',
+  ' - Bing', ' | Bing',
+  ' - DuckDuckGo', ' — DuckDuckGo',
+  ' at DuckDuckGo',
+];
+
+/**
+ * Cleans a raw page title by stripping known site suffixes and normalizing
+ * whitespace. Returns null if the result is too short to be useful.
+ */
+function _cleanTitle(raw) {
+  if (!raw) return null;
+  let title = raw;
+  for (const suffix of _TITLE_SUFFIXES) {
+    if (title.endsWith(suffix)) {
+      title = title.slice(0, -suffix.length);
+      break;
+    }
+  }
+  title = title.replace(/\s+/g, ' ').trim().slice(0, 80);
+  // Discard if too short or looks like a bare site name
+  if (title.length < 8) return null;
+  return title;
+}
+
+/**
+ * Goal inference engine — three-tier extraction strategy:
+ *
+ *   Tier 1 (highest): Search query parsed directly from URL (?q=, ?search_query=)
+ *   Tier 2 (medium):  Cleaned page title after stripping site suffixes
+ *   Tier 3 (lowest):  Domain → topic from INFERENCE_KEYWORDS map
+ *
+ * Tier 1 results always beat Tier 2/3. Within each tier the most-frequent
+ * value wins. Only falls to the next tier if the higher tier yields nothing.
+ */
 async function inferGoalFromHistory() {
   const urls = await getRecentUrls();
   if (urls.length === 0) return null;
 
+  // --- Tier 1: Search query extraction ---
+  const searchCounts = {}; // query string → count
+  let latestSearchTime = 0;
+  let latestSearchQuery = null;
+
+  for (const entry of urls) {
+    const query = _extractSearchQuery(entry.url);
+    if (query) {
+      searchCounts[query] = (searchCounts[query] || 0) + 1;
+      // Also track the most recent unique query for tie-breaking
+      if ((entry.timestamp || 0) > latestSearchTime) {
+        latestSearchTime = entry.timestamp || 0;
+        latestSearchQuery = query;
+      }
+    }
+  }
+
+  if (Object.keys(searchCounts).length > 0) {
+    // Find the most frequent; break ties by recency (latestSearchQuery)
+    let bestQuery = latestSearchQuery;
+    let bestCount = 0;
+    for (const [q, count] of Object.entries(searchCounts)) {
+      if (count > bestCount) {
+        bestQuery = q;
+        bestCount = count;
+      }
+    }
+    return bestQuery;
+  }
+
+  // --- Tier 2: Cleaned page title ---
+  const titleCounts = {};
+
+  for (const entry of urls) {
+    const title = _cleanTitle(entry.title);
+    if (title) {
+      titleCounts[title] = (titleCounts[title] || 0) + 1;
+    }
+  }
+
+  if (Object.keys(titleCounts).length > 0) {
+    let bestTitle = null;
+    let bestCount = 0;
+    for (const [title, count] of Object.entries(titleCounts)) {
+      if (count > bestCount) {
+        bestTitle = title;
+        bestCount = count;
+      }
+    }
+    if (bestTitle) return bestTitle;
+  }
+
+  // --- Tier 3: Domain → topic fallback ---
   const topicCounts = {};
 
   for (const entry of urls) {
     try {
       const hostname = new URL(entry.url).hostname.replace(/^www\./, '');
-
-      // Match against known domain → topic map
       for (const [domain, topic] of Object.entries(INFERENCE_KEYWORDS)) {
-        if (hostname.includes(domain)) {
+        if (hostname === domain || hostname.endsWith('.' + domain)) {
           topicCounts[topic] = (topicCounts[topic] || 0) + 1;
-        }
-      }
-
-      // Check URL path & title for learning terms
-      const text = `${entry.url} ${entry.title || ''}`.toLowerCase();
-      const learningTerms = [
-        'tutorial', 'course', 'learn', 'guide',
-        'documentation', 'docs', 'reference', 'lesson',
-      ];
-      for (const term of learningTerms) {
-        if (text.includes(term)) {
-          const subject = (entry.title || 'something')
-            .split(/[\s\-|:]/)[0]
-            .trim()
-            .slice(0, 30);
-          if (subject) {
-            const key = `learning ${subject}`;
-            topicCounts[key] = (topicCounts[key] || 0) + 1;
-          }
         }
       }
     } catch {
@@ -146,7 +240,6 @@ async function inferGoalFromHistory() {
     }
   }
 
-  // Find the dominant topic
   let bestTopic = null;
   let bestCount = 0;
   for (const [topic, count] of Object.entries(topicCounts)) {
@@ -156,7 +249,7 @@ async function inferGoalFromHistory() {
     }
   }
 
-  return bestTopic;
+  return bestTopic; // null if nothing was found
 }
 
 // ============================================================
@@ -186,11 +279,12 @@ async function getReminderMessage() {
     }
   }
 
-  // Priority 4: Todo list fallback
+  // Priority 4: Todo list fallback — pick a random incomplete non-goal todo
   const todos = await getTodos();
-  const activeTodo = todos.find(t => !t.completed && !t.isGoal);
-  if (activeTodo) {
-    return { type: 'todo', message: REMINDERS.withTodo(activeTodo.text) };
+  const activeTodos = todos.filter(t => !t.completed && !t.isGoal);
+  if (activeTodos.length > 0) {
+    const randomTodo = activeTodos[Math.floor(Math.random() * activeTodos.length)];
+    return { type: 'todo', message: REMINDERS.withTodo(randomTodo.text) };
   }
 
   // Priority 5: Generic
