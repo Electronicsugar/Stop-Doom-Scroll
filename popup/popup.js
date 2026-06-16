@@ -269,32 +269,49 @@ function showBreakCaptcha() {
     ];
   }
 
-  // Render canvas
-  captchaContainer.innerHTML = '';
-  captchaContainer.appendChild(generateCaptchaCanvas(captchaText));
-
   // Reset input & error
   captchaInput.value = '';
   captchaError.classList.remove('visible');
 
+  // Show section FIRST so captchaContainer has layout dimensions
   showSection('captcha');
+  void captchaContainer.offsetWidth;          // force reflow
+
+  // Render canvas (container is now visible & measurable)
+  captchaContainer.innerHTML = '';
+  captchaContainer.appendChild(generateCaptchaCanvas(captchaText));
+
   captchaInput.focus();
 }
 
 /**
  * Draw a stylised CAPTCHA canvas matching the dark theme.
  * Characters are individually rotated / scaled, with noise dots & bezier lines.
+ * Dynamically sizes to fill the container while keeping all characters visible.
  */
 function generateCaptchaCanvas(text) {
   const canvas = document.createElement('canvas');
-  canvas.width  = 320;
-  canvas.height = 80;
+
+  // --- Measure container to size canvas exactly ---
+  const cs = getComputedStyle(captchaContainer);
+  const innerW = captchaContainer.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const W = Math.max(200, Math.floor(innerW) || 254);
+  const H = 80;
+
+  // HiDPI: render at device resolution, display at logical size
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
   // Background
   ctx.fillStyle = '#1a1a2e';
   ctx.beginPath();
-  ctx.roundRect(0, 0, 320, 80, 10);
+  ctx.roundRect(0, 0, W, H, 10);
   ctx.fill();
 
   // Noise dots
@@ -302,21 +319,38 @@ function generateCaptchaCanvas(text) {
     ctx.fillStyle =
       `rgba(${r255()},${r255()},${r255()},0.15)`;
     ctx.beginPath();
-    ctx.arc(Math.random() * 320, Math.random() * 80,
+    ctx.arc(Math.random() * W, Math.random() * H,
             Math.random() * 2 + 0.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Characters
-  const charWidth = 300 / (text.length + 1);
+  // --- Characters: maximize container usage ---
+  // 6% horizontal padding each side → ~88% width utilisation
+  const hPad    = W * 0.06;
+  const usableW = W - hPad * 2;
+  const usableH = H * 0.70;                         // 70% of height for glyphs
+
+  // Largest font where every char fits its slot
+  // Monospace glyph width ≈ 0.62 × fontSize
+  const maxByW   = (usableW / text.length) / 0.62;
+  const maxByH   = usableH;
+  const baseFont = Math.min(maxByW, maxByH);
+
+  const charSlot = usableW / text.length;            // px per character
+  const centerY  = H / 2;
+
   for (let i = 0; i < text.length; i++) {
-    const fontSize = 22 + Math.random() * 10;
+    const fontSize = baseFont + (Math.random() * 4 - 2); // ±2px jitter
     ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
-    const hue = 250 + Math.random() * 60;          // purple-blue range
-    ctx.fillStyle = `hsl(${hue}, 70%, 70%)`;
+    const hue = 250 + Math.random() * 60;            // purple-blue range
+    ctx.fillStyle   = `hsl(${hue}, 70%, 70%)`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
     ctx.save();
-    ctx.translate(charWidth * (i + 0.8), 45 + Math.random() * 10 - 5);
-    ctx.rotate((Math.random() - 0.5) * 0.4);
+    const x = hPad + charSlot * (i + 0.5);           // centred in slot
+    const y = centerY + (Math.random() * 8 - 4);     // ±4px vertical jitter
+    ctx.translate(x, y);
+    ctx.rotate((Math.random() - 0.5) * 0.35);        // ±10° rotation
     ctx.fillText(text[i], 0, 0);
     ctx.restore();
   }
@@ -326,11 +360,11 @@ function generateCaptchaCanvas(text) {
     ctx.strokeStyle = `rgba(124, 58, 237, ${0.2 + Math.random() * 0.2})`;
     ctx.lineWidth   = 0.8 + Math.random();
     ctx.beginPath();
-    ctx.moveTo(Math.random() * 320, Math.random() * 80);
+    ctx.moveTo(Math.random() * W, Math.random() * H);
     ctx.bezierCurveTo(
-      Math.random() * 320, Math.random() * 80,
-      Math.random() * 320, Math.random() * 80,
-      Math.random() * 320, Math.random() * 80,
+      Math.random() * W, Math.random() * H,
+      Math.random() * W, Math.random() * H,
+      Math.random() * W, Math.random() * H,
     );
     ctx.stroke();
   }
