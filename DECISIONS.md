@@ -38,3 +38,13 @@
 - **Chosen solution**: Inside the Extension Popup.
 - **Reasoning**: Floating widgets can break site layouts and be annoying. Keeping it in the popup menu keeps the extension unobtrusive while still allowing the user to check their remaining time.
 - **Tradeoffs**: User has to click the extension icon to see exactly how much time is left.
+
+## 6. Automatic Chill Mode
+- **Problem**: How to handle the case where a user opens their browser and goes straight to YouTube/Instagram without any work intent (no goals, no tasks).
+- **Options considered**:
+  - Overlay prompt asking "Do you want to chill?" (manual opt-in).
+  - Popup toggle button for chill mode.
+  - Automatic detection based on absence of goals and tasks.
+- **Chosen solution**: Automatic detection. If `sessionGoal` is null and there are no active (uncompleted) todos, the first visit to a blocked page auto-enables chill mode.
+- **Reasoning**: The user's intent is clear — if they have nothing to work on and go straight to leisure content, blocking them adds no value. Auto-detection eliminates unnecessary friction. Chill mode is disabled the moment a goal is set or a task is added, restoring blocking immediately.
+- **Tradeoffs**: A user who *intended* to work but forgot to set a goal will not be blocked until they add a goal or task. This is acceptable because the extension's philosophy is "not a full blocker" — it only intervenes when there is a clear work context.

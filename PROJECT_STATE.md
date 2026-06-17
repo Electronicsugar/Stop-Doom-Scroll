@@ -13,6 +13,7 @@ The initial version (v1.0.0) of FocusGuard has been built. The core architecture
   - YouTube URL classification (blocking Home Feed, Shorts).
   - Instagram URL classification (blocking Home Feed, Reels, Explore).
 - **Settings Panel**: Full-page UI to toggle specific block rules, break functionality, and goal inference.
+- **Auto-Chill Mode**: Automatic leisure detection — if no goals and no tasks exist when visiting a distracting site, chill mode activates. Deactivates when a goal is set or a task is added.
 
 ## Features In Progress
 - None currently. Waiting for manual verification.
@@ -20,6 +21,7 @@ The initial version (v1.0.0) of FocusGuard has been built. The core architecture
 ## Known Bugs
 - **[FIXED]** Goal inference never extracted actual search queries from URLs — now uses 3-tier strategy (search query → cleaned title → domain topic).
 - **[FIXED]** Todo fallback in `getReminderMessage()` always picked the first item; now picks randomly.
+- **[FIXED]** Chill mode was unreachable — required skipping goal + zero todos + zero inferred goals. Replaced with automatic detection.
 
 ## Pending Tasks
 - **Icon Generation**: The current icons are duplicates of a single high-res image. Need to be properly resized to 16x16, 32x32, 48x48, 128x128 pixels.
@@ -30,5 +32,5 @@ The initial version (v1.0.0) of FocusGuard has been built. The core architecture
 - None currently.
 
 ## Next Recommended Tasks
-1. Load the extension manually into Chrome and verify all flows (Goal setting, YouTube blocking, Break timer).
+1. Load the extension manually into Chrome and verify all flows (Goal setting, YouTube blocking, Break timer, Auto-chill mode).
 2. Create properly sized icon files.

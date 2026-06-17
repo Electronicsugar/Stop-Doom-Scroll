@@ -102,6 +102,20 @@ function safeSendToTab(tabId, message) {
   });
 }
 
+/**
+ * Broadcast to all YouTube/Instagram tabs to re-evaluate their blocking state.
+ * Reuses the BREAK_ENDED message since it already triggers a full re-check
+ * in content-common.js (URL change callbacks fire for the current URL).
+ */
+async function notifyTabsToRecheck() {
+  const tabs = await api.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
+      safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
+    }
+  }
+}
+
 // ============================================================
 //  GOAL INFERENCE ENGINE
 // ============================================================
@@ -338,32 +352,16 @@ async function checkDistraction(site, pageType, referrer) {
     }
   }
 
-  // ---- User hasn't responded to goal prompt yet ----
-  if (!session.goalPromptShown) {
-    const reminder = await getReminderMessage();
-    return {
-      shouldBlock: true,
-      reason: 'no_goal_set',
-      message: reminder.message,
-    };
-  }
-
-  // ---- User skipped goal, no other signals → offer chill prompt ----
-  if (session.goalSkipped && !session.sessionGoal) {
-    const reminder = await getReminderMessage();
-    if (reminder.type === 'generic') {
-      return {
-        shouldBlock: true,
-        reason: 'chill_prompt',
-        showChillPrompt: true,
-        message: REMINDERS.chillPrompt,
-      };
+  // ---- Auto-chill: no manual goal + no active tasks → intentional leisure ----
+  // If the user opened the browser and went straight to a distracting site
+  // without setting any goals or tasks, treat this as deliberate leisure.
+  if (!session.sessionGoal) {
+    const todos = await getTodos();
+    if (!todos.some(t => !t.completed)) {
+      await updateSession({ chillModeActive: true });
+      console.log('[FocusGuard] Auto-chill activated — no goals or tasks detected');
+      return { shouldBlock: false, reason: 'auto_chill' };
     }
-    return {
-      shouldBlock: true,
-      reason: 'distraction_detected',
-      message: reminder.message,
-    };
   }
 
   // ---- Standard distraction → show reminder ----
@@ -432,11 +430,15 @@ async function handleMessage(message, sender) {
     // ---- Goal actions ----
     case MSG.SET_GOAL: {
       const todo = await addTodo(message.goal, true);
+      const wasChilling = (await getSession()).chillModeActive;
       const session = await updateSession({
         sessionGoal: message.goal,
         goalPromptShown: true,
         goalSkipped: false,
+        chillModeActive: false,
       });
+      // If chill mode was active, notify tabs to re-check blocking rules
+      if (wasChilling) await notifyTabsToRecheck();
       return { success: true, session, todo };
     }
 
@@ -452,6 +454,12 @@ async function handleMessage(message, sender) {
     case MSG.ADD_TODO: {
       const todo = await addTodo(message.text);
       const todos = await getTodos();
+      // Adding a task signals work intent — deactivate auto-chill
+      const curSession = await getSession();
+      if (curSession.chillModeActive) {
+        await updateSession({ chillModeActive: false });
+        await notifyTabsToRecheck();
+      }
       return { success: true, todo, todos };
     }
 
