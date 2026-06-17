@@ -18,6 +18,7 @@ const breakEnabled   = document.getElementById('break-enabled');
 const breakMax       = document.getElementById('break-max');
 const breakMaxValue  = document.getElementById('break-max-value');
 const goalInference  = document.getElementById('goal-inference');
+const autoChill      = document.getElementById('auto-chill');
 const saveIndicator  = document.getElementById('save-indicator');
 
 /** Handle for the auto-hide timer so we can reset it on rapid changes */
@@ -41,6 +42,7 @@ async function loadSettings() {
     breakEnabled.checked  = s.breakButtonEnabled    ?? DEFAULT_SETTINGS.breakButtonEnabled;
     breakMax.value        = s.breakMaxMinutes       ?? DEFAULT_SETTINGS.breakMaxMinutes;
     goalInference.checked = s.goalInferenceEnabled  ?? DEFAULT_SETTINGS.goalInferenceEnabled;
+    autoChill.checked     = s.autoChillEnabled      ?? DEFAULT_SETTINGS.autoChillEnabled;
 
     // Sync the displayed range label
     breakMaxValue.textContent = breakMax.value + ' min';
@@ -67,6 +69,7 @@ async function saveSettings() {
     breakButtonEnabled:  breakEnabled.checked,
     breakMaxMinutes:     parseInt(breakMax.value, 10),
     goalInferenceEnabled: goalInference.checked,
+    autoChillEnabled:     autoChill.checked,
   };
 
   try {
@@ -92,7 +95,7 @@ function showSaveIndicator() {
 // ── Event Listeners ─────────────────────────────────────────────────────────
 
 // Auto-save whenever any toggle changes
-[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference].forEach(el => {
+[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill].forEach(el => {
   el.addEventListener('change', saveSettings);
 });
 

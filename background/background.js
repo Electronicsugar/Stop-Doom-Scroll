@@ -355,7 +355,7 @@ async function checkDistraction(site, pageType, referrer) {
   // ---- Auto-chill: no manual goal + no active tasks → intentional leisure ----
   // If the user opened the browser and went straight to a distracting site
   // without setting any goals or tasks, treat this as deliberate leisure.
-  if (!session.sessionGoal) {
+  if (settings.autoChillEnabled !== false && !session.sessionGoal) {
     const todos = await getTodos();
     if (!todos.some(t => !t.completed)) {
       await updateSession({ chillModeActive: true });
