@@ -596,11 +596,14 @@ input[type="text"]:focus {
   border: 1px solid var(--border-default);
   padding: 8px;
   overflow: hidden;
+  position: relative;
 }
 
 .captcha-container canvas {
   border-radius: 8px;
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .break-section input[type="text"] {
