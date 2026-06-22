@@ -57,6 +57,14 @@ api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.url || !tab.url.startsWith('http')) return;
 
   try {
+    // Only count active tab navigations to avoid hitting the limit from background tab restores
+    if (tab.active) {
+      const session = await getSession();
+      const newCount = (session.urlChangeCount || 0) + 1;
+      await updateSession({ urlChangeCount: newCount });
+      console.log(`[FocusGuard] URL change tracked: ${newCount} (limit is 5)`);
+    }
+
     const settings = await getSettings();
     if (settings.goalInferenceEnabled) {
       await addRecentUrl(tab.url, tab.title || '');
@@ -352,15 +360,33 @@ async function checkDistraction(site, pageType, referrer) {
     }
   }
 
-  // ---- Auto-chill: no manual goal + no active tasks → intentional leisure ----
+  // ---- Auto-chill prompt: no manual goal, no inferred goal, no active tasks, < 5 URL changes ----
   // If the user opened the browser and went straight to a distracting site
-  // without setting any goals or tasks, treat this as deliberate leisure.
+  // without any goals or tasks, ask if they want to chill.
   if (settings.autoChillEnabled !== false && !session.sessionGoal) {
+    // 1. Check tasks
     const todos = await getTodos();
-    if (!todos.some(t => !t.completed)) {
-      await updateSession({ chillModeActive: true });
-      console.log('[FocusGuard] Auto-chill activated — no goals or tasks detected');
-      return { shouldBlock: false, reason: 'auto_chill' };
+    const hasActiveTasks = todos.some(t => !t.completed);
+    
+    // 2. Check for inferred goals (live inference)
+    let hasInferredGoal = !!session.inferredGoal;
+    if (!hasInferredGoal && settings.goalInferenceEnabled) {
+      const inferred = await inferGoalFromHistory();
+      if (inferred) {
+        await updateSession({ inferredGoal: inferred });
+        hasInferredGoal = true;
+      }
+    }
+
+    // Only prompt chill if there's absolutely zero work context and early in session
+    if (!hasActiveTasks && !hasInferredGoal && session.urlChangeCount < 5) {
+      console.log('[FocusGuard] Chill prompt triggered — early session, no goals or tasks detected');
+      return { 
+        shouldBlock: true, 
+        reason: 'chill_prompt',
+        showChillPrompt: true, 
+        message: 'Do you want to chill today?'
+      };
     }
   }
 

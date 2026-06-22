@@ -17,10 +17,6 @@ const api = (typeof browser !== 'undefined') ? browser : chrome;
 // ────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-const goalPrompt      = $('goal-prompt');
-const goalInput       = $('goal-input');
-const goalSetBtn      = $('goal-set-btn');
-const goalSkipBtn     = $('goal-skip-btn');
 
 const popupMain       = $('popup-main');
 const taskInput       = $('task-input');
@@ -92,15 +88,15 @@ function render() {
     return;
   }
 
-  // 2. Goal prompt (not yet shown & no goal set & not skipped)
-  if (s && !s.goalPromptShown && !s.sessionGoal && !s.goalSkipped) {
-    showSection('goal');
-    goalInput.focus();
-    return;
+  // 2. Default: todo list
+  showSection('main');
+
+  if (s && !s.sessionGoal) {
+    taskInput.placeholder = 'What is your goal for today?';
+  } else {
+    taskInput.placeholder = 'Add a task...';
   }
 
-  // 3. Default: todo list
-  showSection('main');
   renderBadges();
   renderTodos();
   renderBreakButton();
@@ -190,35 +186,7 @@ function renderBreakButton() {
   breakBtn.style.display = enabled ? '' : 'none';
 }
 
-// ────────────────────────────────────────────
-// GOAL FLOW
-// ────────────────────────────────────────────
-function handleSetGoal() {
-  const text = goalInput.value.trim();
-  if (!text) {
-    goalInput.focus();
-    return;
-  }
 
-  sendMessage({ type: MSG.SET_GOAL, goal: text }).then((res) => {
-    if (res) {
-      currentState.session = res.session ?? currentState.session;
-      if (res.todo) {
-        currentState.todos.unshift(res.todo);
-      }
-    }
-    render();
-  });
-}
-
-function handleSkipGoal() {
-  sendMessage({ type: MSG.SKIP_GOAL }).then((res) => {
-    if (res) {
-      currentState.session = res.session ?? currentState.session;
-    }
-    render();
-  });
-}
 
 // ────────────────────────────────────────────
 // TODO FLOW
@@ -227,14 +195,29 @@ function handleAddTodo() {
   const text = taskInput.value.trim();
   if (!text) return;
 
-  sendMessage({ type: MSG.ADD_TODO, text }).then((res) => {
-    if (res) {
-      currentState.todos = res.todos ?? currentState.todos;
-    }
-    taskInput.value = '';
-    render();
-    taskInput.focus();
-  });
+  const s = currentState.session;
+  if (s && !s.sessionGoal) {
+    sendMessage({ type: MSG.SET_GOAL, goal: text }).then((res) => {
+      if (res) {
+        currentState.session = res.session ?? currentState.session;
+        if (res.todo) {
+          currentState.todos.unshift(res.todo);
+        }
+      }
+      taskInput.value = '';
+      render();
+      taskInput.focus();
+    });
+  } else {
+    sendMessage({ type: MSG.ADD_TODO, text }).then((res) => {
+      if (res) {
+        currentState.todos = res.todos ?? currentState.todos;
+      }
+      taskInput.value = '';
+      render();
+      taskInput.focus();
+    });
+  }
 }
 
 function handleToggleTodo(id) {
@@ -494,7 +477,6 @@ function openSettings() {
 // SECTION MANAGER
 // ────────────────────────────────────────────
 const SECTIONS = {
-  goal:          goalPrompt,
   main:          popupMain,
   captcha:       breakSection,
   timer:         timerSection,
@@ -524,13 +506,6 @@ function sendMessage(msg) {
 // EVENT LISTENERS
 // ────────────────────────────────────────────
 function setupEventListeners() {
-  // Goal
-  goalSetBtn.addEventListener('click', handleSetGoal);
-  goalSkipBtn.addEventListener('click', handleSkipGoal);
-  goalInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleSetGoal();
-  });
-
   // Todos
   addBtn.addEventListener('click', handleAddTodo);
   taskInput.addEventListener('keydown', (e) => {
