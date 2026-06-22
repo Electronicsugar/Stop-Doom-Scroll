@@ -277,12 +277,13 @@
   }
 
   // ---- DISTRACTION CHECK ----
-  async function fgCheckAndBlock(site, pageType) {
+  async function fgCheckAndBlock(site, pageType, previousPageType = null) {
     try {
       const result = await fgSendMessage({
         type: FG_MSG.CHECK_DISTRACTION,
         site,
         pageType,
+        previousPageType,
         referrer: document.referrer || '',
       });
 

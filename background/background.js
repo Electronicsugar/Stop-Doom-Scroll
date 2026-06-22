@@ -317,7 +317,7 @@ async function getReminderMessage() {
 //  DISTRACTION CHECK
 // ============================================================
 
-async function checkDistraction(site, pageType, referrer) {
+async function checkDistraction(site, pageType, previousPageType, referrer) {
   const session = await getSession();
   const settings = await getSettings();
 
@@ -339,25 +339,27 @@ async function checkDistraction(site, pageType, referrer) {
   let isBlockedType = false;
 
   if (site === SITE.YOUTUBE) {
-    if (pageType === PAGE_TYPE.SHORTS && settings.youtube.blockShorts) isBlockedType = true;
+    if (pageType === PAGE_TYPE.SHORTS && settings.youtube.blockShorts) {
+      // Consecutive doomscroll mechanic: allow first Short, block subsequent
+      if (previousPageType === PAGE_TYPE.SHORTS) {
+        isBlockedType = true;
+      }
+    }
     if (pageType === PAGE_TYPE.HOME_FEED && settings.youtube.blockFeed) isBlockedType = true;
   } else if (site === SITE.INSTAGRAM) {
     const reelTypes = [PAGE_TYPE.REELS, PAGE_TYPE.REELS_FEED, PAGE_TYPE.SINGLE_REEL];
-    if (reelTypes.includes(pageType) && settings.instagram.blockReels) isBlockedType = true;
+    if (reelTypes.includes(pageType) && settings.instagram.blockReels) {
+      // Consecutive doomscroll mechanic: allow first Reel, block subsequent
+      if (reelTypes.includes(previousPageType)) {
+        isBlockedType = true;
+      }
+    }
     if (pageType === PAGE_TYPE.HOME_FEED && settings.instagram.blockFeed) isBlockedType = true;
     if (pageType === PAGE_TYPE.EXPLORE && settings.instagram.blockFeed) isBlockedType = true;
   }
 
   if (!isBlockedType) {
     return { shouldBlock: false, reason: 'allowed_type' };
-  }
-
-  // ---- Shared link exception ----
-  if (referrer && isExternalReferrer(referrer, site)) {
-    // A single short/reel from an external source is likely shared intentionally
-    if (pageType === PAGE_TYPE.SHORTS || pageType === PAGE_TYPE.SINGLE_REEL) {
-      return { shouldBlock: false, reason: 'shared_link' };
-    }
   }
 
   // ---- Auto-chill prompt: no manual goal, no inferred goal, no active tasks, < 5 URL changes ----
@@ -399,16 +401,7 @@ async function checkDistraction(site, pageType, referrer) {
   };
 }
 
-function isExternalReferrer(referrer, currentSite) {
-  try {
-    const refHost = new URL(referrer).hostname.toLowerCase();
-    if (currentSite === SITE.YOUTUBE) return !refHost.includes('youtube.com');
-    if (currentSite === SITE.INSTAGRAM) return !refHost.includes('instagram.com');
-    return true;
-  } catch {
-    return false;
-  }
-}
+
 
 // ============================================================
 //  BREAK TIMER (via chrome.alarms)
@@ -582,7 +575,7 @@ async function handleMessage(message, sender) {
 
     // ---- Distraction check (from content scripts) ----
     case MSG.CHECK_DISTRACTION: {
-      return await checkDistraction(message.site, message.pageType, message.referrer);
+      return await checkDistraction(message.site, message.pageType, message.previousPageType, message.referrer);
     }
 
     default:

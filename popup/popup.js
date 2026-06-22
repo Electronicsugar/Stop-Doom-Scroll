@@ -7,7 +7,7 @@
  * Communicates with the background service worker via chrome.runtime messages.
  */
 
-import { MSG, CAPTCHA_CONFIG, BREAK_TIMER_OPTIONS } from '../lib/constants.js';
+import { MSG, CAPTCHA_CONFIG } from '../lib/constants.js';
 
 // Cross-browser API handle (Firefox = browser, Chrome = chrome)
 const api = (typeof browser !== 'undefined') ? browser : chrome;
@@ -30,10 +30,6 @@ const captchaInput    = $('captcha-input');
 const captchaVerifyBtn = $('captcha-verify-btn');
 const captchaCancelBtn = $('captcha-cancel-btn');
 const captchaError    = $('captcha-error');
-
-const timerSection    = $('timer-section');
-const timerOptions    = $('timer-options');
-const timerCancelBtn  = $('timer-cancel-btn');
 
 const breakActiveSection = $('break-active-section');
 const ringProgress    = $('ring-progress');
@@ -365,30 +361,13 @@ function r255() { return Math.floor(Math.random() * 256); }
 function verifyCaptcha() {
   const input = captchaInput.value;
   if (input === captchaText) {
-    showTimerPicker();
+    startBreak(currentState.settings.breakMaxMinutes || 10);
   } else {
     captchaError.classList.add('visible');
     captchaInput.value = '';
     captchaInput.focus();
     setTimeout(() => captchaError.classList.remove('visible'), 2000);
   }
-}
-
-// ────────────────────────────────────────────
-// BREAK FLOW — Step 2: Timer picker
-// ────────────────────────────────────────────
-function showTimerPicker() {
-  timerOptions.innerHTML = '';
-
-  BREAK_TIMER_OPTIONS.forEach((min) => {
-    const btn = document.createElement('button');
-    btn.className = 'timer-option-btn';
-    btn.innerHTML = `${min}<span class="timer-label">min</span>`;
-    btn.addEventListener('click', () => startBreak(min));
-    timerOptions.appendChild(btn);
-  });
-
-  showSection('timer');
 }
 
 // ────────────────────────────────────────────
@@ -411,13 +390,8 @@ function startBreak(minutes) {
 function startBreakCountdown() {
   // If we don't know the total yet (popup opened mid-break), estimate it
   if (!totalBreakMs && currentState.session?.breakExpiresAt) {
-    const remaining = currentState.session.breakExpiresAt - Date.now();
-    // Best-effort: pick the option closest to remaining time
-    const remainingMin = remaining / 60000;
-    const closest = BREAK_TIMER_OPTIONS.reduce((prev, cur) =>
-      Math.abs(cur - remainingMin) < Math.abs(prev - remainingMin) ? cur : prev
-    );
-    totalBreakMs = closest * 60 * 1000;
+    const defaultMins = currentState.settings?.breakMaxMinutes || 10;
+    totalBreakMs = defaultMins * 60 * 1000;
   }
 
   // Initial paint
@@ -479,7 +453,6 @@ function openSettings() {
 const SECTIONS = {
   main:          popupMain,
   captcha:       breakSection,
-  timer:         timerSection,
   'break-active': breakActiveSection,
 };
 
@@ -519,9 +492,6 @@ function setupEventListeners() {
     if (e.key === 'Enter') verifyCaptcha();
   });
   captchaCancelBtn.addEventListener('click', () => showSection('main'));
-
-  // Timer picker
-  timerCancelBtn.addEventListener('click', () => showSection('main'));
 
   // Break active
   endBreakBtn.addEventListener('click', endBreakEarly);

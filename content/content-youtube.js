@@ -32,17 +32,22 @@
     return 'OTHER';
   }
 
+  let _previousPageType = null;
+
   function handlePageChange(url) {
     const pageType = classifyUrl(url);
-    console.log('[FocusGuard:YouTube] Page:', pageType, url);
+    console.log(`[FocusGuard:YouTube] Page: ${pageType} (Previous: ${_previousPageType}) | ${url}`);
 
     // Only check distraction for potentially distracting page types
     if (pageType === 'HOME_FEED' || pageType === 'SHORTS') {
-      FG.checkAndBlock(SITE, pageType);
+      FG.checkAndBlock(SITE, pageType, _previousPageType);
     } else {
       // Not a distracting page - remove any existing overlay
       FG.removeOverlay();
     }
+
+    // Update previous page type for the next navigation
+    _previousPageType = pageType;
   }
 
   // Listen for URL changes

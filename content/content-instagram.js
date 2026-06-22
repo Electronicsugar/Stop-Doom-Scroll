@@ -45,16 +45,20 @@
     return 'PROFILE';
   }
 
+  let _previousPageType = null;
+
   function handlePageChange(url) {
     const pageType = classifyUrl(url);
-    console.log('[FocusGuard:Instagram] Page:', pageType, url);
+    console.log(`[FocusGuard:Instagram] Page: ${pageType} (Previous: ${_previousPageType}) | ${url}`);
 
     const distractingTypes = ['HOME_FEED', 'REELS', 'REELS_FEED', 'SINGLE_REEL', 'EXPLORE'];
     if (distractingTypes.includes(pageType)) {
-      FG.checkAndBlock(SITE, pageType);
+      FG.checkAndBlock(SITE, pageType, _previousPageType);
     } else {
       FG.removeOverlay();
     }
+
+    _previousPageType = pageType;
   }
 
   // Listen for URL changes
