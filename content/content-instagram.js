@@ -45,13 +45,29 @@
     return 'PROFILE';
   }
 
+  function extractReelId(url) {
+    const match = url.match(/\/reel(?:s)?\/([^/?#]+)/);
+    return match ? match[1] : null;
+  }
+
   let _previousPageType = null;
+  let _previousVideoId = null;
 
   function handlePageChange(url) {
     const pageType = classifyUrl(url);
-    console.log(`[FocusGuard:Instagram] Page: ${pageType} (Previous: ${_previousPageType}) | ${url}`);
+    const videoId = (pageType === 'SINGLE_REEL' || pageType === 'REELS_FEED' || pageType === 'REELS') ? extractReelId(url) : null;
+
+    console.log(`[FocusGuard:Instagram] Page: ${pageType} (Previous: ${_previousPageType}) | ID: ${videoId} | URL: ${url}`);
 
     const distractingTypes = ['HOME_FEED', 'REELS', 'REELS_FEED', 'SINGLE_REEL', 'EXPLORE'];
+    const reelTypes = ['REELS', 'REELS_FEED', 'SINGLE_REEL'];
+
+    // If it's the exact same Reel as before (e.g. redirect/normalization from /reel/ to /reels/), ignore the event.
+    if (reelTypes.includes(pageType) && reelTypes.includes(_previousPageType) && videoId === _previousVideoId && videoId !== null) {
+      console.log('[FocusGuard:Instagram] Ignoring URL normalization for the same video ID.');
+      return;
+    }
+
     if (distractingTypes.includes(pageType)) {
       FG.checkAndBlock(SITE, pageType, _previousPageType);
     } else {
@@ -59,6 +75,7 @@
     }
 
     _previousPageType = pageType;
+    _previousVideoId = videoId;
   }
 
   // Listen for URL changes
