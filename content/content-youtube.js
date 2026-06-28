@@ -46,6 +46,7 @@
     return 'OTHER';
   }
 
+<<<<<<< HEAD
   // ============================================================
   //  RECOMMENDATION SELECTORS
   //
@@ -523,7 +524,15 @@
   //  PAGE CHANGE HANDLER
   // ============================================================
 
+=======
+  function extractShortsId(url) {
+    const match = url.match(/\/shorts\/([^/?#]+)/);
+    return match ? match[1] : null;
+  }
+
+>>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
   let _previousPageType = null;
+  let _previousVideoId = null;
 
   /**
    * Main entry point for each page navigation.
@@ -531,7 +540,15 @@
    */
   async function handlePageChange(url) {
     const pageType = classifyUrl(url);
-    console.log(`[FocusGuard:YouTube] Page: ${pageType} (Previous: ${_previousPageType}) | ${url}`);
+    const videoId = pageType === 'SHORTS' ? extractShortsId(url) : null;
+    
+    console.log(`[FocusGuard:YouTube] Page: ${pageType} (Previous: ${_previousPageType}) | ID: ${videoId} | URL: ${url}`);
+
+    // If it's the exact same Short as before (e.g. redirect/normalization to remove share params), ignore the event.
+    if (pageType === 'SHORTS' && _previousPageType === 'SHORTS' && videoId === _previousVideoId && videoId !== null) {
+      console.log('[FocusGuard:YouTube] Ignoring URL normalization for the same video ID.');
+      return;
+    }
 
     // Always reset before applying new-page rules — prevents stale hidden states
     teardownSuppression();
@@ -596,7 +613,12 @@
       FG.removeOverlay();
     }
 
+<<<<<<< HEAD
+=======
+    // Update previous page type and ID for the next navigation
+>>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
     _previousPageType = pageType;
+    _previousVideoId = videoId;
   }
 
   // ============================================================
