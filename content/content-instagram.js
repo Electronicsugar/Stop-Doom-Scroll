@@ -167,7 +167,7 @@
   // This is a recommendation surface and is hidden.
   // The sidebar also contains the logged-in user's own profile link and nav links
   // — those are inside a separate element and are preserved.
-  const SIDEBAR_SELECTORS = [
+  const SIDEBAR_SUGGESTION_SELECTORS = [
     // The right sidebar's suggested accounts section
     // On Instagram, the right sidebar contains both the user identity block
     // (avatar + username) and a list of suggested accounts below it.
