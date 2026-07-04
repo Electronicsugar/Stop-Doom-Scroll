@@ -61,7 +61,6 @@
     return 'PROFILE';
   }
 
-<<<<<<< HEAD
   // ============================================================
   //  RECOMMENDATION SELECTORS
   //
@@ -233,17 +232,11 @@
   //
   //  Uses Shadow DOM to prevent Instagram's CSS from interfering.
   // ============================================================
+  //  INLINE FOCUS CARD
+  // ============================================================
 
-  /**
-   * Injects an inline focus card before anchorElement.
-   * If the card already exists, repositions it instead of recreating it.
-   *
-   * @param {Element|null} anchorElement
-   * @param {string} [subtitle]
-   */
-  function injectFocusCard(anchorElement, subtitle) {
+  function injectFocusCard(anchorElement) {
     const existing = document.getElementById(FOCUS_CARD_ID);
-
     if (existing) {
       if (anchorElement && anchorElement.parentNode &&
           existing.nextSibling !== anchorElement) {
@@ -254,72 +247,95 @@
 
     const host = document.createElement('div');
     host.id = FOCUS_CARD_ID;
-    host.style.cssText = 'display:block;width:100%;';
+    host.style.cssText = 'display:block;width:100%;margin-top:20px;';
 
     const shadow = host.attachShadow({ mode: 'open' });
 
     const style = document.createElement('style');
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      .fg-card {
+
+      .fg-focus-card {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 48px 32px;
-        margin: 16px 0 24px;
+        padding: 48px 24px;
         background: linear-gradient(135deg,
           rgba(124, 58, 237, 0.07) 0%,
           rgba(59, 130, 246, 0.05) 100%);
         border: 1px solid rgba(124, 58, 237, 0.18);
-        border-radius: 20px;
+        border-radius: 16px;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         text-align: center;
         animation: fgFadeIn 0.35s ease;
       }
-      .fg-icon { font-size: 40px; margin-bottom: 14px; filter: drop-shadow(0 4px 10px rgba(124,58,237,0.3)); }
-      .fg-title { font-size: 20px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
-      .fg-sub { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.65; max-width: 360px; margin-bottom: 20px; }
-      .fg-chips { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+      .fg-icon {
+        font-size: 40px;
+        margin-bottom: 12px;
+        filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
+      }
+
+      .fg-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 8px;
+      }
+
+      .fg-subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+        line-height: 1.6;
+        max-width: 380px;
+        margin-bottom: 20px;
+      }
+
+      .fg-chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
       .fg-chip {
-        background: rgba(124,58,237,0.14);
-        border: 1px solid rgba(124,58,237,0.25);
+        background: rgba(124, 58, 237, 0.14);
+        border: 1px solid rgba(124, 58, 237, 0.25);
         border-radius: 20px;
-        padding: 5px 14px;
-        font-size: 12px;
+        padding: 5px 12px;
+        font-size: 11px;
         font-weight: 500;
         color: #c4b5fd;
       }
+
       @keyframes fgFadeIn {
-        from { opacity: 0; transform: translateY(8px); }
+        from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
       }
     `;
     shadow.appendChild(style);
 
     const card = document.createElement('div');
-    card.className = 'fg-card';
-    card.setAttribute('role', 'status');
-    card.setAttribute('aria-label', 'FocusGuard: Recommendations hidden');
+    card.className = 'fg-focus-card';
 
     const icon = document.createElement('span');
     icon.className = 'fg-icon';
-    icon.setAttribute('aria-hidden', 'true');
     icon.textContent = '🛡️';
 
     const title = document.createElement('h2');
     title.className = 'fg-title';
     title.textContent = 'Stay Focused';
 
-    const sub = document.createElement('p');
-    sub.className = 'fg-sub';
-    sub.textContent = subtitle || 'Recommendations are hidden. Use intentional navigation.';
+    const subtitle = document.createElement('p');
+    subtitle.className = 'fg-subtitle';
+    subtitle.textContent = 'Recommendations and feed posts are hidden. Use search or direct messaging instead.';
 
     const chips = document.createElement('div');
     chips.className = 'fg-chips';
-    const hints = ['💬 Messages', '📖 Stories', '🔔 Notifications', '🔍 Search accounts', '👤 Profile'];
-    hints.forEach((label) => {
+    ['🔍 Search', '💬 Messages', '👤 Profile', '🔗 Direct links'].forEach((label) => {
       const chip = document.createElement('span');
       chip.className = 'fg-chip';
       chip.textContent = label;
@@ -328,14 +344,13 @@
 
     card.appendChild(icon);
     card.appendChild(title);
-    card.appendChild(sub);
+    card.appendChild(subtitle);
     card.appendChild(chips);
     shadow.appendChild(card);
 
     if (anchorElement && anchorElement.parentNode) {
       anchorElement.parentNode.insertBefore(host, anchorElement);
     } else {
-      // Fallback: prepend to main content area or body
       const main = document.querySelector('main') || document.body;
       main.prepend(host);
     }
@@ -347,30 +362,12 @@
   }
 
   // ============================================================
-  //  MUTATION OBSERVER — Dynamic content insertion
-  //
-  //  Instagram is a React SPA that renders content lazily and injects
-  //  feed posts incrementally as the user scrolls. The observer ensures
-  //  newly inserted recommendation elements are hidden immediately.
-  //
-  //  - Observe document.body (not main) — Instagram recreates <main>
-  //    and its children during SPA navigation.
-  //  - Accumulate mutation batches in _pendingMutations to prevent
-  //    records being dropped when rAF is already scheduled.
-  //  - Scan only mutation.addedNodes for performance.
-  //  - Always disconnect + null before reassigning.
+  //  MUTATION OBSERVER
   // ============================================================
 
-  /** @type {MutationObserver|null} */
   let _suppressionObserver = null;
-
-  /** @type {string[]|null} */
   let _activeSelectors = null;
-
-  /** @type {number|null} */
   let _pendingFrame = null;
-
-  /** @type {MutationRecord[]} */
   let _pendingMutations = [];
 
   function _disconnectObserver() {
@@ -396,7 +393,6 @@
         }
       } catch (e) { /* ignore */ }
     }
-    // Scan descendants of the added node
     hideFeedElements(selectors, node);
   }
 
@@ -405,10 +401,7 @@
     _activeSelectors = selectors;
 
     _suppressionObserver = new MutationObserver((mutations) => {
-      // Accumulate all batches — prevents records being dropped when
-      // _pendingFrame is already set (same fix as content-youtube.js).
       _pendingMutations.push(...mutations);
-
       if (_pendingFrame !== null) return;
 
       _pendingFrame = requestAnimationFrame(() => {
@@ -424,7 +417,6 @@
       });
     });
 
-    // document.body is the only stable root across Instagram SPA navigations
     _suppressionObserver.observe(document.body, {
       childList: true,
       subtree: true,
@@ -432,7 +424,48 @@
   }
 
   // ============================================================
-  //  TEARDOWN
+  //  SUPPRESSION ACTIVATORS
+  // ============================================================
+
+  function suppressHomeFeed() {
+    // Hide right sidebar suggestions block
+    hideFeedElements(SIDEBAR_SUGGESTION_SELECTORS);
+
+    // Hide feed posts & show inline card
+    let anchor = null;
+    for (const selector of HOME_FEED_SELECTORS) {
+      const found = document.querySelector(selector);
+      if (found) { anchor = found; break; }
+    }
+
+    hideFeedElements(HOME_FEED_SELECTORS);
+    injectFocusCard(anchor);
+
+    // Watch for new elements (infinite scrolling feed posts)
+    const allSelectors = [...HOME_FEED_SELECTORS, ...SIDEBAR_SUGGESTION_SELECTORS];
+    _startObserver(allSelectors);
+  }
+
+  function suppressExplorePage() {
+    let anchor = null;
+    for (const selector of EXPLORE_SELECTORS) {
+      const found = document.querySelector(selector);
+      if (found) { anchor = found; break; }
+    }
+
+    hideFeedElements(EXPLORE_SELECTORS);
+    injectFocusCard(anchor);
+
+    _startObserver(EXPLORE_SELECTORS);
+  }
+
+  function suppressSearchPage() {
+    // Explore tab search subpage - no grid hiding needed
+    _disconnectObserver();
+  }
+
+  // ============================================================
+  //  FULL TEARDOWN
   // ============================================================
 
   function teardownSuppression() {
@@ -442,121 +475,14 @@
   }
 
   // ============================================================
-  //  SEARCH QUERY DETECTION
-  //  On /explore/search/ Instagram reflects the user's search query in
-  //  the URL (?q=...) or in a visible search input. We read the URL
-  //  parameter to decide whether to suppress all content or only
-  //  non-account recommendation sections.
-  // ============================================================
-
-  function getSearchQuery() {
-    try {
-      return new URL(location.href).searchParams.get('q') || '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  // ============================================================
-  //  SUPPRESSION — HOME FEED
-  //
-  //  Hides individual feed post cards inside <main>.
-  //  The Stories bar (a separate div above the posts) is preserved.
-  //  The right-sidebar suggested accounts section is also hidden.
-  //
-  //  Focus card is inserted before the first feed article.
-  // ============================================================
-
-  function suppressHomeFeed() {
-    const allSelectors = [...HOME_FEED_SELECTORS, ...SIDEBAR_SELECTORS];
-
-    const anchor = document.querySelector('main article');
-
-    hideFeedElements(allSelectors);
-    injectFocusCard(
-      anchor,
-      'Your home feed is hidden. Use Stories, Search, Messages, or visit profiles directly.'
-    );
-
-    _startObserver(allSelectors);
-
-    // Staggered retries — Instagram renders feed posts incrementally
-    [400, 900, 2000].forEach((delay) => {
-      setTimeout(() => {
-        if (_activeSelectors) hideFeedElements(_activeSelectors);
-      }, delay);
-    });
-  }
-
-  // ============================================================
-  //  SUPPRESSION — EXPLORE PAGE
-  //
-  //  Hides the explore media grid and trending searches.
-  //  Preserves the search input at the top of /explore/.
-  //
-  //  Focus card is prepended into <main>.
-  // ============================================================
-
-  function suppressExplorePage() {
-    const anchor = document.querySelector('main [role="presentation"]') ||
-                   document.querySelector('main');
-
-    hideFeedElements(EXPLORE_SELECTORS);
-    injectFocusCard(
-      anchor,
-      'The Explore grid is hidden. Use the search bar to find specific accounts.'
-    );
-
-    _startObserver(EXPLORE_SELECTORS);
-
-    [400, 900, 2000].forEach((delay) => {
-      setTimeout(() => {
-        if (_activeSelectors) hideFeedElements(_activeSelectors);
-      }, delay);
-    });
-  }
-
-  // ============================================================
-  //  SUPPRESSION — SEARCH PAGE
-  //
-  //  Two modes:
-  //  1. No query typed → hide all suggestion/trending sections
-  //  2. Query typed    → hide reels/media/audio sections; keep account results
-  //
-  //  The search input itself is never hidden.
-  //  The observer watches for dynamically injected suggestion sections.
-  // ============================================================
-
-  function suppressSearchPage() {
-    const query = getSearchQuery();
-
-    const selectors = query
-      // Query present: only hide non-account recommendation sections
-      ? SEARCH_SECTIONS_TO_HIDE
-      // No query: hide all content below the search bar
-      : [...SEARCH_SECTIONS_TO_HIDE, 'main [role="presentation"]', 'main article'];
-
-    hideFeedElements(selectors);
-    _startObserver(selectors);
-
-    [400, 900, 2000].forEach((delay) => {
-      setTimeout(() => {
-        if (_activeSelectors) hideFeedElements(_activeSelectors);
-      }, delay);
-    });
-  }
-
-  // ============================================================
   //  PAGE CHANGE HANDLER
   // ============================================================
 
-=======
   function extractReelId(url) {
     const match = url.match(/\/reel(?:s)?\/([^/?#]+)/);
     return match ? match[1] : null;
   }
 
->>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
   let _previousPageType = null;
   let _previousVideoId = null;
 
@@ -566,18 +492,9 @@
 
     console.log(`[FocusGuard:Instagram] Page: ${pageType} (Previous: ${_previousPageType}) | ID: ${videoId} | URL: ${url}`);
 
-<<<<<<< HEAD
     // Always tear down before applying new rules
     teardownSuppression();
 
-    const reelTypes = ['REELS', 'REELS_FEED', 'SINGLE_REEL'];
-
-    if (reelTypes.includes(pageType)) {
-      // ---- Reels: preserve existing fullscreen block behavior ----
-      // The consecutive-doomscroll mechanic (allow first Reel, block subsequent)
-      // lives in the background's checkDistraction() and is handled by checkAndBlock.
-=======
-    const distractingTypes = ['HOME_FEED', 'REELS', 'REELS_FEED', 'SINGLE_REEL', 'EXPLORE'];
     const reelTypes = ['REELS', 'REELS_FEED', 'SINGLE_REEL'];
 
     // If it's the exact same Reel as before (e.g. redirect/normalization from /reel/ to /reels/), ignore the event.
@@ -586,13 +503,14 @@
       return;
     }
 
-    if (distractingTypes.includes(pageType)) {
->>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
+    if (reelTypes.includes(pageType)) {
+      // ---- Reels: preserve existing fullscreen block behavior ----
+      // The consecutive-doomscroll mechanic (allow first Reel, block subsequent)
+      // lives in the background's checkDistraction() and is handled by checkAndBlock.
       FG.checkAndBlock(SITE, pageType, _previousPageType);
 
     } else if (pageType === 'HOME_FEED') {
       // ---- Home Feed: suppression model ----
-      // Gated by instagram.blockFeed.
       try {
         const result = await FG.sendMessage({
           type: FG.MSG.CHECK_DISTRACTION,

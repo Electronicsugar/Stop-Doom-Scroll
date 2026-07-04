@@ -46,7 +46,7 @@
     return 'OTHER';
   }
 
-<<<<<<< HEAD
+
   // ============================================================
   //  RECOMMENDATION SELECTORS
   //
@@ -524,13 +524,11 @@
   //  PAGE CHANGE HANDLER
   // ============================================================
 
-=======
   function extractShortsId(url) {
     const match = url.match(/\/shorts\/([^/?#]+)/);
     return match ? match[1] : null;
   }
 
->>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
   let _previousPageType = null;
   let _previousVideoId = null;
 
@@ -613,10 +611,7 @@
       FG.removeOverlay();
     }
 
-<<<<<<< HEAD
-=======
     // Update previous page type and ID for the next navigation
->>>>>>> 196a3ceece816b7b57ccae38c2efa91196ec66ff
     _previousPageType = pageType;
     _previousVideoId = videoId;
   }
