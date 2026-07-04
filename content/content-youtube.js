@@ -578,7 +578,9 @@
         // If !shouldBlock (break/chill active, or blockFeed=false): do nothing —
         // teardownSuppression() already cleared any prior state above.
       } catch (err) {
-        console.warn('[FocusGuard:YouTube] Error checking distraction (HOME_FEED):', err);
+        if (!err.message?.includes('Extension context invalidated')) {
+          console.warn('[FocusGuard:YouTube] Error checking distraction (HOME_FEED):', err);
+        }
       }
 
     } else if (pageType === 'DIRECT_VIDEO') {
@@ -601,7 +603,9 @@
           suppressWatchRecommendations();
         }
       } catch (err) {
-        console.warn('[FocusGuard:YouTube] Error checking distraction (DIRECT_VIDEO):', err);
+        if (!err.message?.includes('Extension context invalidated')) {
+          console.warn('[FocusGuard:YouTube] Error checking distraction (DIRECT_VIDEO):', err);
+        }
       }
 
     } else {

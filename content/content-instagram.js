@@ -523,7 +523,9 @@
           suppressHomeFeed();
         }
       } catch (err) {
-        console.warn('[FocusGuard:Instagram] Error checking distraction (HOME_FEED):', err);
+        if (!err.message?.includes('Extension context invalidated')) {
+          console.warn('[FocusGuard:Instagram] Error checking distraction (HOME_FEED):', err);
+        }
       }
 
     } else if (pageType === 'EXPLORE') {
@@ -548,7 +550,9 @@
           }
         }
       } catch (err) {
-        console.warn('[FocusGuard:Instagram] Error checking distraction (EXPLORE):', err);
+        if (!err.message?.includes('Extension context invalidated')) {
+          console.warn('[FocusGuard:Instagram] Error checking distraction (EXPLORE):', err);
+        }
       }
 
     } else {

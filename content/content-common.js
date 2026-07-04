@@ -297,7 +297,9 @@
         fgRemoveOverlay();
       }
     } catch (err) {
-      console.warn('[FocusGuard] Error checking distraction:', err);
+      if (!err.message?.includes('Extension context invalidated')) {
+        console.warn('[FocusGuard] Error checking distraction:', err);
+      }
     }
   }
 
