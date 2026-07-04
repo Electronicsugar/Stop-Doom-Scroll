@@ -227,25 +227,7 @@
         color: rgba(255, 255, 255, 0.5);
         line-height: 1.65;
         max-width: 440px;
-        margin-bottom: 24px;
-      }
-
-      .fg-chips {
-        display: inline-flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .fg-chip {
-        background: rgba(124, 58, 237, 0.14);
-        border: 1px solid rgba(124, 58, 237, 0.25);
-        border-radius: 20px;
-        padding: 6px 16px;
-        font-size: 12px;
-        font-weight: 500;
-        color: #c4b5fd;
-        letter-spacing: 0.01em;
+        margin-bottom: 0;
       }
 
       @keyframes fgFadeIn {
@@ -258,7 +240,7 @@
     const card = document.createElement('div');
     card.className = 'fg-focus-card';
     card.setAttribute('role', 'status');
-    card.setAttribute('aria-label', 'FocusGuard: Recommendations hidden');
+    card.setAttribute('aria-label', 'FocusGuard: Recommendations blocked');
 
     const icon = document.createElement('span');
     icon.className = 'fg-icon';
@@ -271,21 +253,11 @@
 
     const subtitle = document.createElement('p');
     subtitle.className = 'fg-subtitle';
-    subtitle.textContent = `Recommendations are hidden. Use intentional navigation to find what you're looking for.`;
-
-    const chips = document.createElement('div');
-    chips.className = 'fg-chips';
-    ['🔍 Search', '📺 Subscriptions', '📚 Library', '🔗 Direct links'].forEach((label) => {
-      const chip = document.createElement('span');
-      chip.className = 'fg-chip';
-      chip.textContent = label;
-      chips.appendChild(chip);
-    });
+    subtitle.textContent = 'Recommendations are blocked';
 
     card.appendChild(icon);
     card.appendChild(title);
     card.appendChild(subtitle);
-    card.appendChild(chips);
     shadow.appendChild(card);
 
     // Insert immediately before the anchor element (sibling, not child)

@@ -291,24 +291,7 @@
         color: #94a3b8;
         line-height: 1.6;
         max-width: 380px;
-        margin-bottom: 20px;
-      }
-
-      .fg-chips {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .fg-chip {
-        background: rgba(124, 58, 237, 0.14);
-        border: 1px solid rgba(124, 58, 237, 0.25);
-        border-radius: 20px;
-        padding: 5px 12px;
-        font-size: 11px;
-        font-weight: 500;
-        color: #c4b5fd;
+        margin-bottom: 0;
       }
 
       @keyframes fgFadeIn {
@@ -331,21 +314,11 @@
 
     const subtitle = document.createElement('p');
     subtitle.className = 'fg-subtitle';
-    subtitle.textContent = 'Recommendations and feed posts are hidden. Use search or direct messaging instead.';
-
-    const chips = document.createElement('div');
-    chips.className = 'fg-chips';
-    ['🔍 Search', '💬 Messages', '👤 Profile', '🔗 Direct links'].forEach((label) => {
-      const chip = document.createElement('span');
-      chip.className = 'fg-chip';
-      chip.textContent = label;
-      chips.appendChild(chip);
-    });
+    subtitle.textContent = 'Recommendations are blocked';
 
     card.appendChild(icon);
     card.appendChild(title);
     card.appendChild(subtitle);
-    card.appendChild(chips);
     shadow.appendChild(card);
 
     if (anchorElement && anchorElement.parentNode) {
