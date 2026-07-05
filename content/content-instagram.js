@@ -200,12 +200,11 @@
    */
   function hideFeedElements(selectors, root) {
     const scope = root || document;
-    for (const selector of selectors) {
-      try {
-        scope.querySelectorAll(selector).forEach(_hideElement);
-      } catch (e) {
-        // Ignore invalid selectors (browser-version CSS differences)
-      }
+    if (!selectors || selectors.length === 0) return;
+    try {
+      scope.querySelectorAll(selectors.join(', ')).forEach(_hideElement);
+    } catch (e) {
+      // Ignore invalid selectors (browser-version CSS differences)
     }
   }
 
@@ -463,8 +462,6 @@
     const pageType = classifyUrl(url);
     const videoId = (pageType === 'SINGLE_REEL' || pageType === 'REELS_FEED' || pageType === 'REELS') ? extractReelId(url) : null;
 
-    console.log(`[FocusGuard:Instagram] Page: ${pageType} (Previous: ${_previousPageType}) | ID: ${videoId} | URL: ${url}`);
-
     // Always tear down before applying new rules
     teardownSuppression();
 
@@ -472,7 +469,6 @@
 
     // If it's the exact same Reel as before (e.g. redirect/normalization from /reel/ to /reels/), ignore the event.
     if (reelTypes.includes(pageType) && reelTypes.includes(_previousPageType) && videoId === _previousVideoId && videoId !== null) {
-      console.log('[FocusGuard:Instagram] Ignoring URL normalization for the same video ID.');
       return;
     }
 
@@ -562,6 +558,4 @@
 
   FG.onUrlChange(handlePageChange);
   handlePageChange(location.href);
-
-  console.log('[FocusGuard:Instagram] Content script loaded — Intentional Usage Model active');
 })();

@@ -32,7 +32,6 @@ async function initSession() {
   await setSession(session);
   await clearCompletedTodos();
   await clearRecentUrls();
-  console.log('[FocusGuard] New session initialized');
 }
 
 // Browser launched → new session
@@ -44,7 +43,6 @@ api.runtime.onStartup.addListener(() => {
 api.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     api.storage.local.set({ [STORAGE_KEYS.SETTINGS]: DEFAULT_SETTINGS });
-    console.log('[FocusGuard] Installed — default settings saved');
   }
   initSession();
 });
@@ -62,7 +60,6 @@ api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       const session = await getSession();
       const newCount = (session.urlChangeCount || 0) + 1;
       await updateSession({ urlChangeCount: newCount });
-      console.log(`[FocusGuard] URL change tracked: ${newCount} (limit is 5)`);
     }
 
     const settings = await getSettings();
@@ -116,11 +113,9 @@ function safeSendToTab(tabId, message) {
  * in content-common.js (URL change callbacks fire for the current URL).
  */
 async function notifyTabsToRecheck() {
-  const tabs = await api.tabs.query({});
+  const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
   for (const tab of tabs) {
-    if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
-      safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
-    }
+    safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
   }
 }
 
@@ -194,62 +189,31 @@ async function inferGoalFromHistory() {
   const urls = await getRecentUrls();
   if (urls.length === 0) return null;
 
-  // --- Tier 1: Search query extraction ---
-  const searchCounts = {}; // query string → count
+  const searchCounts = {};
+  const titleCounts = {};
+  const topicCounts = {};
   let latestSearchTime = 0;
   let latestSearchQuery = null;
 
+  // Single pass over URLs to populate all tiers
   for (const entry of urls) {
+    // Tier 1
     const query = _extractSearchQuery(entry.url);
     if (query) {
       searchCounts[query] = (searchCounts[query] || 0) + 1;
-      // Also track the most recent unique query for tie-breaking
       if ((entry.timestamp || 0) > latestSearchTime) {
         latestSearchTime = entry.timestamp || 0;
         latestSearchQuery = query;
       }
     }
-  }
 
-  if (Object.keys(searchCounts).length > 0) {
-    // Find the most frequent; break ties by recency (latestSearchQuery)
-    let bestQuery = latestSearchQuery;
-    let bestCount = 0;
-    for (const [q, count] of Object.entries(searchCounts)) {
-      if (count > bestCount) {
-        bestQuery = q;
-        bestCount = count;
-      }
-    }
-    return bestQuery;
-  }
-
-  // --- Tier 2: Cleaned page title ---
-  const titleCounts = {};
-
-  for (const entry of urls) {
+    // Tier 2
     const title = _cleanTitle(entry.title);
     if (title) {
       titleCounts[title] = (titleCounts[title] || 0) + 1;
     }
-  }
 
-  if (Object.keys(titleCounts).length > 0) {
-    let bestTitle = null;
-    let bestCount = 0;
-    for (const [title, count] of Object.entries(titleCounts)) {
-      if (count > bestCount) {
-        bestTitle = title;
-        bestCount = count;
-      }
-    }
-    if (bestTitle) return bestTitle;
-  }
-
-  // --- Tier 3: Domain → topic fallback ---
-  const topicCounts = {};
-
-  for (const entry of urls) {
+    // Tier 3
     try {
       const hostname = new URL(entry.url).hostname.replace(/^www\./, '');
       for (const [domain, topic] of Object.entries(INFERENCE_KEYWORDS)) {
@@ -262,6 +226,33 @@ async function inferGoalFromHistory() {
     }
   }
 
+  // --- Resolve Tier 1 ---
+  if (Object.keys(searchCounts).length > 0) {
+    let bestQuery = latestSearchQuery;
+    let bestCount = 0;
+    for (const [q, count] of Object.entries(searchCounts)) {
+      if (count > bestCount) {
+        bestQuery = q;
+        bestCount = count;
+      }
+    }
+    return bestQuery;
+  }
+
+  // --- Resolve Tier 2 ---
+  if (Object.keys(titleCounts).length > 0) {
+    let bestTitle = null;
+    let bestCount = 0;
+    for (const [title, count] of Object.entries(titleCounts)) {
+      if (count > bestCount) {
+        bestTitle = title;
+        bestCount = count;
+      }
+    }
+    if (bestTitle) return bestTitle;
+  }
+
+  // --- Resolve Tier 3 ---
   let bestTopic = null;
   let bestCount = 0;
   for (const [topic, count] of Object.entries(topicCounts)) {
@@ -382,7 +373,6 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
 
     // Only prompt chill if there's absolutely zero work context and early in session
     if (!hasActiveTasks && !hasInferredGoal && session.urlChangeCount < 5) {
-      console.log('[FocusGuard] Chill prompt triggered — early session, no goals or tasks detected');
       return { 
         shouldBlock: true, 
         reason: 'chill_prompt',
@@ -413,14 +403,10 @@ api.alarms.onAlarm.addListener(async (alarm) => {
   await updateSession({ breakModeActive: false, breakExpiresAt: null });
 
   // Notify all relevant tabs that break ended
-  const tabs = await api.tabs.query({});
+  const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
   for (const tab of tabs) {
-    if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
-      safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
-    }
+    safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
   }
-
-  console.log('[FocusGuard] Break timer expired');
 });
 
 // ============================================================
@@ -428,14 +414,14 @@ api.alarms.onAlarm.addListener(async (alarm) => {
 // ============================================================
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  handleMessage(message, sender).then(sendResponse).catch((err) => {
+  handleMessage(message).then(sendResponse).catch((err) => {
     console.error('[FocusGuard] Message handler error:', err);
     sendResponse({ error: err.message });
   });
   return true; // Keep the message channel open for async response
 });
 
-async function handleMessage(message, sender) {
+async function handleMessage(message) {
   switch (message.type) {
 
     // ---- State queries ----
@@ -516,15 +502,13 @@ async function handleMessage(message, sender) {
       api.alarms.create('fg_break_timer', { when: expiresAt });
 
       // Unblock all relevant tabs
-      const tabs = await api.tabs.query({});
+      const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
       for (const tab of tabs) {
-        if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
-          safeSendToTab(tab.id, {
-            type: MSG.UNBLOCK_PAGE,
-            reason: 'break_started',
-            expiresAt,
-          });
-        }
+        safeSendToTab(tab.id, {
+          type: MSG.UNBLOCK_PAGE,
+          reason: 'break_started',
+          expiresAt,
+        });
       }
 
       return { success: true, expiresAt };
@@ -534,11 +518,9 @@ async function handleMessage(message, sender) {
       await updateSession({ breakModeActive: false, breakExpiresAt: null });
       api.alarms.clear('fg_break_timer');
 
-      const tabs = await api.tabs.query({});
+      const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
       for (const tab of tabs) {
-        if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
-          safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
-        }
+        safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
       }
 
       return { success: true };
@@ -548,11 +530,9 @@ async function handleMessage(message, sender) {
     case MSG.ENABLE_CHILL: {
       const session = await updateSession({ chillModeActive: true });
 
-      const tabs = await api.tabs.query({});
+      const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
       for (const tab of tabs) {
-        if (tab.url && (tab.url.includes('youtube.com') || tab.url.includes('instagram.com'))) {
-          safeSendToTab(tab.id, { type: MSG.UNBLOCK_PAGE, reason: 'chill_mode' });
-        }
+        safeSendToTab(tab.id, { type: MSG.UNBLOCK_PAGE, reason: 'chill_mode' });
       }
 
       return { success: true, session };
@@ -582,5 +562,3 @@ async function handleMessage(message, sender) {
       return { error: `Unknown message type: ${message.type}` };
   }
 }
-
-console.log('[FocusGuard] Background service worker loaded');

@@ -36,14 +36,19 @@
 
   // MutationObserver fallback (debounced)
   let _debounceTimer;
-  new MutationObserver(() => {
+  const urlObserver = new MutationObserver(() => {
     clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(() => {
       if (location.href !== _lastUrl) {
         _notifyUrlChange(location.href);
       }
     }, 150);
-  }).observe(document.documentElement, { subtree: true, childList: true });
+  });
+  
+  const titleNode = document.querySelector('title');
+  if (titleNode) {
+    urlObserver.observe(titleNode, { childList: true, subtree: true, characterData: true });
+  }
 
   // popstate for back/forward
   window.addEventListener('popstate', () => {
@@ -272,10 +277,6 @@
     if (existing) existing.remove();
   }
 
-  function fgIsOverlayActive() {
-    return !!document.getElementById(OVERLAY_ID);
-  }
-
   // ---- DISTRACTION CHECK ----
   async function fgCheckAndBlock(site, pageType, previousPageType = null) {
     try {
@@ -310,9 +311,6 @@
     onUrlChange: fgOnUrlChange,
     injectOverlay: fgInjectOverlay,
     removeOverlay: fgRemoveOverlay,
-    isOverlayActive: fgIsOverlayActive,
     checkAndBlock: fgCheckAndBlock,
   };
-
-  console.log('[FocusGuard] Content common loaded');
 })();

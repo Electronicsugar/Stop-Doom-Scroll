@@ -121,12 +121,11 @@
    */
   function hideFeedElements(selectors, root) {
     const scope = root || document;
-    for (const selector of selectors) {
-      try {
-        scope.querySelectorAll(selector).forEach(_hideElement);
-      } catch (e) {
-        // Ignore selectors unsupported by the current browser version
-      }
+    if (!selectors || selectors.length === 0) return;
+    try {
+      scope.querySelectorAll(selectors.join(', ')).forEach(_hideElement);
+    } catch (e) {
+      // Ignore selectors unsupported by the current browser version
     }
   }
 
@@ -511,12 +510,9 @@
   async function handlePageChange(url) {
     const pageType = classifyUrl(url);
     const videoId = pageType === 'SHORTS' ? extractShortsId(url) : null;
-    
-    console.log(`[FocusGuard:YouTube] Page: ${pageType} (Previous: ${_previousPageType}) | ID: ${videoId} | URL: ${url}`);
 
     // If it's the exact same Short as before (e.g. redirect/normalization to remove share params), ignore the event.
     if (pageType === 'SHORTS' && _previousPageType === 'SHORTS' && videoId === _previousVideoId && videoId !== null) {
-      console.log('[FocusGuard:YouTube] Ignoring URL normalization for the same video ID.');
       return;
     }
 
@@ -628,6 +624,4 @@
 
   // Initial check on script injection (page load / extension enable)
   handlePageChange(location.href);
-
-  console.log('[FocusGuard:YouTube] Content script loaded — Intentional Usage Model active');
 })();

@@ -27,6 +27,18 @@ let saveTimeout;
 // ── Load Settings ───────────────────────────────────────────────────────────
 
 /**
+ * Calculates and updates the custom CSS --fill variable on the range input
+ * to ensure the styled track matches the thumb's current position.
+ */
+function updateSliderFill() {
+  const min = parseFloat(breakMax.min) || 1;
+  const max = parseFloat(breakMax.max) || 30;
+  const val = parseFloat(breakMax.value) || 10;
+  const percentage = ((val - min) / (max - min)) * 100;
+  breakMax.style.setProperty('--fill', `${percentage}%`);
+}
+
+/**
  * Fetch the current settings from the background and reflect them in the UI.
  * Falls back to DEFAULT_SETTINGS if the message returns nothing.
  */
@@ -41,6 +53,9 @@ async function loadSettings() {
     igBlockFeed.checked   = s.instagram?.blockFeed  ?? DEFAULT_SETTINGS.instagram.blockFeed;
     breakEnabled.checked  = s.breakButtonEnabled    ?? DEFAULT_SETTINGS.breakButtonEnabled;
     breakMax.value        = s.breakMaxMinutes       ?? DEFAULT_SETTINGS.breakMaxMinutes;
+    
+    updateSliderFill();
+
     goalInference.checked = s.goalInferenceEnabled  ?? DEFAULT_SETTINGS.goalInferenceEnabled;
     autoChill.checked     = s.autoChillEnabled      ?? DEFAULT_SETTINGS.autoChillEnabled;
 
@@ -102,6 +117,7 @@ function showSaveIndicator() {
 // Update displayed value in real-time while dragging the range slider
 breakMax.addEventListener('input', () => {
   breakMaxValue.textContent = breakMax.value + ' min';
+  updateSliderFill();
 });
 
 // Persist when the user releases the slider
