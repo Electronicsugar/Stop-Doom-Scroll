@@ -467,6 +467,11 @@ input[type="range"]:focus-visible {
   border-color: rgba(0,0,0,0.12);
 }
 
+.theme-dot-auto {
+  background: linear-gradient(135deg, #E8E5DE 50%, #22262A 50%);
+  border-color: rgba(128,128,128,0.3);
+}
+
 .theme-dot-dark {
   background: #22262A;
   border-color: rgba(255,255,255,0.12);

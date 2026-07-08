@@ -22,47 +22,68 @@
     });
   }
 
-  // ── Theme: load immediately and wire up the two-dot picker ───────────────
-  function syncThemeUI(theme) {
+  // ── Theme: load immediately and wire up the three-dot picker ───────────────
+  function syncThemeUI(mode) {
+    var autoBtn   = document.getElementById('theme-dot-auto');
     var lightBtn  = document.getElementById('theme-dot-light');
     var darkBtn   = document.getElementById('theme-dot-dark');
     var labelEl   = document.getElementById('theme-label');
     var legacyChk = document.getElementById('theme-toggle');
 
-    if (theme === 'dark') {
-      if (lightBtn)  { lightBtn.classList.remove('active'); lightBtn.setAttribute('aria-pressed', 'false'); }
-      if (darkBtn)   { darkBtn.classList.add('active');     darkBtn.setAttribute('aria-pressed', 'true');  }
-      if (labelEl)   labelEl.textContent  = 'Dark';
-      if (legacyChk) legacyChk.checked   = true;
+    if (autoBtn)  { autoBtn.classList.remove('active');  autoBtn.setAttribute('aria-pressed', 'false');  }
+    if (lightBtn) { lightBtn.classList.remove('active'); lightBtn.setAttribute('aria-pressed', 'false'); }
+    if (darkBtn)  { darkBtn.classList.remove('active');  darkBtn.setAttribute('aria-pressed', 'false');  }
+
+    if (mode === 'dark') {
+      if (darkBtn) { darkBtn.classList.add('active'); darkBtn.setAttribute('aria-pressed', 'true'); }
+      if (labelEl) labelEl.textContent = 'Dark';
+      if (legacyChk) legacyChk.checked = true;
+    } else if (mode === 'light') {
+      if (lightBtn) { lightBtn.classList.add('active'); lightBtn.setAttribute('aria-pressed', 'true'); }
+      if (labelEl) labelEl.textContent = 'Light';
+      if (legacyChk) legacyChk.checked = false;
     } else {
-      if (lightBtn)  { lightBtn.classList.add('active');    lightBtn.setAttribute('aria-pressed', 'true');  }
-      if (darkBtn)   { darkBtn.classList.remove('active'); darkBtn.setAttribute('aria-pressed', 'false'); }
-      if (labelEl)   labelEl.textContent  = 'Light';
-      if (legacyChk) legacyChk.checked   = false;
+      if (autoBtn) { autoBtn.classList.add('active'); autoBtn.setAttribute('aria-pressed', 'true'); }
+      if (labelEl) labelEl.textContent = 'Auto';
+      if (legacyChk && typeof FocusGuardTheme !== 'undefined') {
+        legacyChk.checked = (FocusGuardTheme.getTheme() === 'dark');
+      }
     }
   }
 
   // Load saved theme and apply it
   if (typeof FocusGuardTheme !== 'undefined') {
-    FocusGuardTheme.load(function (theme) {
-      syncThemeUI(theme);
+    // Initial UI sync
+    syncThemeUI(FocusGuardTheme.getMode ? FocusGuardTheme.getMode() : 'auto');
+    
+    // Subscribe to theme changes
+    FocusGuardTheme.subscribe(function (resolvedTheme) {
+      syncThemeUI(FocusGuardTheme.getMode ? FocusGuardTheme.getMode() : resolvedTheme);
     });
   }
 
-  // Wire up the two dot buttons
+  // Wire up the three dot buttons
+  var autoBtn  = document.getElementById('theme-dot-auto');
   var lightBtn = document.getElementById('theme-dot-light');
   var darkBtn  = document.getElementById('theme-dot-dark');
 
+  if (autoBtn) {
+    autoBtn.addEventListener('click', function () {
+      if (typeof FocusGuardTheme !== 'undefined' && FocusGuardTheme.setTheme) FocusGuardTheme.setTheme('auto');
+      syncThemeUI('auto');
+    });
+  }
+
   if (lightBtn) {
     lightBtn.addEventListener('click', function () {
-      if (typeof FocusGuardTheme !== 'undefined') FocusGuardTheme.set('light');
+      if (typeof FocusGuardTheme !== 'undefined' && FocusGuardTheme.setTheme) FocusGuardTheme.setTheme('light');
       syncThemeUI('light');
     });
   }
 
   if (darkBtn) {
     darkBtn.addEventListener('click', function () {
-      if (typeof FocusGuardTheme !== 'undefined') FocusGuardTheme.set('dark');
+      if (typeof FocusGuardTheme !== 'undefined' && FocusGuardTheme.setTheme) FocusGuardTheme.setTheme('dark');
       syncThemeUI('dark');
     });
   }
@@ -72,7 +93,7 @@
   if (legacyChk) {
     legacyChk.addEventListener('change', function () {
       var theme = this.checked ? 'dark' : 'light';
-      if (typeof FocusGuardTheme !== 'undefined') FocusGuardTheme.set(theme);
+      if (typeof FocusGuardTheme !== 'undefined' && FocusGuardTheme.setTheme) FocusGuardTheme.setTheme(theme);
       syncThemeUI(theme);
     });
   }
