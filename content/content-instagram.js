@@ -244,6 +244,9 @@
       return;
     }
 
+    const isDark = FocusGuardTheme.detectHostTheme('instagram');
+    const tokens = FocusGuardTheme.getTokens(isDark ? 'dark' : 'light');
+
     const host = document.createElement('div');
     host.id = FOCUS_CARD_ID;
     host.style.cssText = 'display:block;width:100%;margin-top:20px;';
@@ -252,72 +255,42 @@
 
     const style = document.createElement('style');
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
       * { margin: 0; padding: 0; box-sizing: border-box; }
-
-      .fg-focus-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 48px 24px;
-        background: linear-gradient(135deg,
-          rgba(124, 58, 237, 0.07) 0%,
-          rgba(59, 130, 246, 0.05) 100%);
-        border: 1px solid rgba(124, 58, 237, 0.18);
-        border-radius: 16px;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        text-align: center;
-        animation: fgFadeIn 0.35s ease;
-      }
-
-      .fg-icon {
-        font-size: 40px;
-        margin-bottom: 12px;
-        filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
-      }
-
-      .fg-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #f1f5f9;
-        margin-bottom: 8px;
-      }
-
-      .fg-subtitle {
-        font-size: 13px;
-        color: #94a3b8;
-        line-height: 1.6;
-        max-width: 380px;
-        margin-bottom: 0;
-      }
-
       @keyframes fgFadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
       }
+      @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
     `;
     shadow.appendChild(style);
 
-    const card = document.createElement('div');
-    card.className = 'fg-focus-card';
-
-    const icon = document.createElement('span');
-    icon.className = 'fg-icon';
-    icon.textContent = '🛡️';
-
-    const title = document.createElement('h2');
-    title.className = 'fg-title';
-    title.textContent = 'Stay Focused';
+    const card = FG.UI.createCard(isDark);
+    
+    // Override styles for inline card
+    card.style.maxWidth = '100%';
+    card.style.width = '100%';
+    card.style.padding = '48px 24px';
+    
+    card.appendChild(FG.UI.createLogo(style, isDark));
+    card.appendChild(FG.UI.createHeading('Stay Focused', isDark));
 
     const subtitle = document.createElement('p');
-    subtitle.className = 'fg-subtitle';
     subtitle.textContent = 'Recommendations are blocked';
-
-    card.appendChild(icon);
-    card.appendChild(title);
+    subtitle.style.cssText = `
+      font-size: 14px;
+      color: ${tokens.colors.inkSecondary};
+      line-height: 1.6;
+      margin-top: ${tokens.spacing.sm};
+    `;
     card.appendChild(subtitle);
+
     shadow.appendChild(card);
 
     if (anchorElement && anchorElement.parentNode) {
@@ -326,11 +299,35 @@
       const main = document.querySelector('main') || document.body;
       main.prepend(host);
     }
+
+    const _cleanupFns = [];
+    const refreshCard = () => {
+      removeFocusCard();
+      injectFocusCard(anchorElement);
+    };
+
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', refreshCard);
+    _cleanupFns.push(() => mq.removeEventListener('change', refreshCard));
+
+    const metaEl = document.querySelector('meta[name="color-scheme"]');
+    if (metaEl) {
+      const metaObs = new MutationObserver(refreshCard);
+      metaObs.observe(metaEl, { attributes: true, attributeFilter: ['content'] });
+      _cleanupFns.push(() => metaObs.disconnect());
+    }
+
+    host._fgCleanup = _cleanupFns;
   }
 
   function removeFocusCard() {
     const existing = document.getElementById(FOCUS_CARD_ID);
-    if (existing) existing.remove();
+    if (existing) {
+      if (Array.isArray(existing._fgCleanup)) {
+        existing._fgCleanup.forEach(fn => { try { fn(); } catch (e) {} });
+      }
+      existing.remove();
+    }
   }
 
   // ============================================================

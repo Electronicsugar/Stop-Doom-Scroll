@@ -16,6 +16,7 @@ import {
 
 import {
   getSession, setSession, updateSession, createDefaultSession,
+  getStreak, updateStreak,
   getTodos, addTodo, toggleTodo, deleteTodo, clearCompletedTodos,
   getSettings, updateSettings,
   getRecentUrls, addRecentUrl, clearRecentUrls,
@@ -353,13 +354,18 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
     return { shouldBlock: false, reason: 'allowed_type' };
   }
 
-  // ---- Auto-chill prompt: no manual goal, no inferred goal, no active tasks, < 5 URL changes ----
-  // If the user opened the browser and went straight to a distracting site
-  // without any goals or tasks, ask if they want to chill.
-  if (settings.autoChillEnabled !== false && !session.sessionGoal) {
+  // ---- Auto-chill prompt: explicit rules based on UI context ----
+  function shouldShowChillPrompt(session, todos) {
+    if (session.sessionGoal) return false;
+    if (session.inferredGoal) return false;
+    if (todos.some(t => !t.completed)) return false;
+    if (session.goalPromptShown) return false; // Already prompted this session
+    return true; 
+  }
+
+  if (settings.autoChillEnabled !== false) {
     // 1. Check tasks
     const todos = await getTodos();
-    const hasActiveTasks = todos.some(t => !t.completed);
     
     // 2. Check for inferred goals (live inference)
     let hasInferredGoal = !!session.inferredGoal;
@@ -367,12 +373,11 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
       const inferred = await inferGoalFromHistory();
       if (inferred) {
         await updateSession({ inferredGoal: inferred });
-        hasInferredGoal = true;
+        session.inferredGoal = inferred;
       }
     }
 
-    // Only prompt chill if there's absolutely zero work context and early in session
-    if (!hasActiveTasks && !hasInferredGoal && session.urlChangeCount < 5) {
+    if (shouldShowChillPrompt(session, todos)) {
       return { 
         shouldBlock: true, 
         reason: 'chill_prompt',
@@ -400,7 +405,15 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
 api.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'fg_break_timer') return;
 
-  await updateSession({ breakModeActive: false, breakExpiresAt: null });
+  // Atomically clear break state and start a new focus session.
+  // focusStartedAt is set to NOW so the popup timer resets to 00:00:00.
+  await updateSession({
+    breakModeActive:    false,
+    breakExpiresAt:     null,
+    sessionState:       'FOCUSING',
+    focusStartedAt:     Date.now(),
+    accumulatedFocusMs: 0,
+  });
 
   // Notify all relevant tabs that break ended
   const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
@@ -429,7 +442,8 @@ async function handleMessage(message) {
       const session = await getSession();
       const todos = await getTodos();
       const settings = await getSettings();
-      return { session, todos, settings };
+      const streak = await getStreak();
+      return { uiState: { session, todos, settings, streak } };
     }
 
     // ---- Goal actions ----
@@ -498,7 +512,28 @@ async function handleMessage(message) {
       const duration = Math.min(message.minutes, maxMin);
       const expiresAt = Date.now() + duration * 60 * 1000;
 
-      await updateSession({ breakModeActive: true, breakExpiresAt: expiresAt });
+      // Read current session to accumulate focus time before break
+      const currentSess = await getSession();
+      const nowMs = Date.now();
+      const segmentMs = currentSess.focusStartedAt
+        ? nowMs - currentSess.focusStartedAt
+        : 0;
+      const totalFocusMs = (currentSess.accumulatedFocusMs || 0) + segmentMs;
+
+      // Atomically set break state, null out timer, update sessionState and breakCount.
+      // Background owns all session state — popup never writes storage directly.
+      await updateSession({
+        breakModeActive:    true,
+        breakExpiresAt:     expiresAt,
+        sessionState:       'BREAK',
+        focusStartedAt:     null,
+        accumulatedFocusMs: totalFocusMs,
+        breakCount:         (currentSess.breakCount || 0) + 1,
+      });
+
+      // Update streak with this focus segment
+      await updateStreak(totalFocusMs);
+
       api.alarms.create('fg_break_timer', { when: expiresAt });
 
       // Unblock all relevant tabs
@@ -514,8 +549,65 @@ async function handleMessage(message) {
       return { success: true, expiresAt };
     }
 
+    case MSG.PAUSE_SESSION: {
+      // Pause the focus timer. Blocking remains fully active — we only stop the clock.
+      const sess = await getSession();
+      if (sess.sessionState !== 'FOCUSING') return { success: false, reason: 'not_focusing' };
+      const now  = Date.now();
+      const segMs = sess.focusStartedAt ? (now - sess.focusStartedAt) : 0;
+      await updateSession({
+        sessionState:       'PAUSED',
+        focusStartedAt:     null,
+        pauseStartedAt:     now,
+        accumulatedFocusMs: (sess.accumulatedFocusMs || 0) + segMs,
+      });
+      return { success: true };
+    }
+
+    case MSG.RESUME_SESSION: {
+      // Resume the focus timer from where it was paused.
+      const sess2 = await getSession();
+      if (sess2.sessionState !== 'PAUSED') return { success: false, reason: 'not_paused' };
+      await updateSession({
+        sessionState:   'FOCUSING',
+        focusStartedAt: Date.now(),
+        pauseStartedAt: null,
+      });
+      return { success: true };
+    }
+
+    case MSG.RESET_SESSION: {
+      // Reset creates a completely new focus session.
+      // Does NOT affect break mode — if a break is active it stays.
+      const sess3  = await getSession();
+      const now3   = Date.now();
+      // Accumulate any remaining focus time into streak before reset
+      let totalMs3 = sess3.accumulatedFocusMs || 0;
+      if (sess3.focusStartedAt) totalMs3 += now3 - sess3.focusStartedAt;
+      await updateStreak(totalMs3);
+
+      // Create fresh timer state, preserving break state if a break is running
+      await updateSession({
+        sessionState:       sess3.breakModeActive ? 'BREAK' : 'FOCUSING',
+        focusStartedAt:     sess3.breakModeActive ? null : now3,
+        accumulatedFocusMs: 0,
+        pauseStartedAt:     null,
+        sessionStartedAt:   now3,
+        breakCount:         0,
+      });
+      return { success: true };
+    }
+
     case MSG.END_BREAK: {
-      await updateSession({ breakModeActive: false, breakExpiresAt: null });
+      // Atomically clear break and start a new focus session.
+      // This is the ONLY path that resets the focus timer to 00:00:00.
+      await updateSession({
+        breakModeActive:    false,
+        breakExpiresAt:     null,
+        sessionState:       'FOCUSING',
+        focusStartedAt:     Date.now(),
+        accumulatedFocusMs: 0,
+      });
       api.alarms.clear('fg_break_timer');
 
       const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
