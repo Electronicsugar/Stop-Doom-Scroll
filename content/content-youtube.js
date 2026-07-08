@@ -171,6 +171,8 @@
       return;
     }
 
+    FG.sendMessage({ type: FG.MSG.RECORD_DISTRACTION_BLOCKED }).catch(() => {});
+
     ThemeManager.init('youtube');
 
     const host = document.createElement('div');

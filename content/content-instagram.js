@@ -244,6 +244,8 @@
       return;
     }
 
+    FG.sendMessage({ type: FG.MSG.RECORD_DISTRACTION_BLOCKED }).catch(() => {});
+
     const isDark = FocusGuardTheme.detectHostTheme('instagram');
     const tokens = FocusGuardTheme.getTokens(isDark ? 'dark' : 'light');
 

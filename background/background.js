@@ -16,7 +16,7 @@ import {
 
 import {
   getSession, setSession, updateSession, createDefaultSession,
-  getStreak, updateStreak,
+  getStreak, updateStreak, incrementDistractionsBlocked,
   getTodos, addTodo, toggleTodo, deleteTodo, clearCompletedTodos,
   getSettings, updateSettings,
   getRecentUrls, addRecentUrl, clearRecentUrls,
@@ -648,6 +648,10 @@ async function handleMessage(message) {
     // ---- Distraction check (from content scripts) ----
     case MSG.CHECK_DISTRACTION: {
       return await checkDistraction(message.site, message.pageType, message.previousPageType, message.referrer);
+    }
+    
+    case MSG.RECORD_DISTRACTION_BLOCKED: {
+      return await incrementDistractionsBlocked();
     }
 
     default:

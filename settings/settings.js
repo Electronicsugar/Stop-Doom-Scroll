@@ -19,7 +19,19 @@ const breakMax       = document.getElementById('break-max');
 const breakMaxValue  = document.getElementById('break-max-value');
 const goalInference  = document.getElementById('goal-inference');
 const autoChill      = document.getElementById('auto-chill');
+const showMission    = document.getElementById('show-mission');
+const showTasks      = document.getElementById('show-tasks');
+const showFocusSession = document.getElementById('show-focus-session');
+const showFocusStreak  = document.getElementById('show-focus-streak');
+const breakDurationRow = document.getElementById('break-duration-row');
+const breakDurationSlider = document.getElementById('break-duration-slider');
 const saveIndicator  = document.getElementById('save-indicator');
+
+function toggleBreakSettingsVisibility() {
+  const isEnabled = breakEnabled.checked;
+  if (breakDurationRow) breakDurationRow.style.display = isEnabled ? '' : 'none';
+  if (breakDurationSlider) breakDurationSlider.style.display = isEnabled ? '' : 'none';
+}
 
 /** Handle for the auto-hide timer so we can reset it on rapid changes */
 let saveTimeout;
@@ -58,6 +70,12 @@ async function loadSettings() {
 
     goalInference.checked = s.goalInferenceEnabled  ?? DEFAULT_SETTINGS.goalInferenceEnabled;
     autoChill.checked     = s.autoChillEnabled      ?? DEFAULT_SETTINGS.autoChillEnabled;
+    showMission.checked   = s.showMission           ?? DEFAULT_SETTINGS.showMission;
+    showTasks.checked     = s.showTasks             ?? DEFAULT_SETTINGS.showTasks;
+    showFocusSession.checked = s.showFocusSession   ?? DEFAULT_SETTINGS.showFocusSession;
+    showFocusStreak.checked  = s.showFocusStreak    ?? DEFAULT_SETTINGS.showFocusStreak;
+
+    toggleBreakSettingsVisibility();
 
     // Sync the displayed range label
     breakMaxValue.textContent = breakMax.value + ' min';
@@ -85,6 +103,10 @@ async function saveSettings() {
     breakMaxMinutes:     parseInt(breakMax.value, 10),
     goalInferenceEnabled: goalInference.checked,
     autoChillEnabled:     autoChill.checked,
+    showMission:          showMission.checked,
+    showTasks:            showTasks.checked,
+    showFocusSession:     showFocusSession.checked,
+    showFocusStreak:      showFocusStreak.checked,
   };
 
   try {
@@ -93,6 +115,8 @@ async function saveSettings() {
   } catch (err) {
     console.error('[FocusGuard Settings] Failed to save settings:', err);
   }
+
+  toggleBreakSettingsVisibility();
 }
 
 // ── Save Indicator ──────────────────────────────────────────────────────────
@@ -110,7 +134,7 @@ function showSaveIndicator() {
 // ── Event Listeners ─────────────────────────────────────────────────────────
 
 // Auto-save whenever any toggle changes
-[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill].forEach(el => {
+[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill, showMission, showTasks, showFocusSession, showFocusStreak].forEach(el => {
   el.addEventListener('change', saveSettings);
 });
 

@@ -110,11 +110,14 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <div class="setting-row range-row">
-          <span class="setting-label">Break Duration</span>
+        <div class="setting-row range-row" id="break-duration-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Break Duration</span>
+            <span class="setting-sublabel">CAPTCHA length increases for longer breaks</span>
+          </div>
           <span class="range-value" id="break-max-value">10 min</span>
         </div>
-        <div class="slider-wrap">
+        <div class="slider-wrap" id="break-duration-slider">
           <input type="range" id="break-max" min="1" max="30" step="1" value="10" />
         </div>
       </section>
@@ -154,6 +157,40 @@
         </div>
         <div class="slider-wrap">
           <input type="range" id="reminder-interval" min="5" max="60" step="5" value="25" />
+        </div>
+      </section>
+
+      <!-- ── POPUP SECTIONS ── -->
+      <div class="settings-section-label">POPUP SECTIONS</div>
+
+      <section class="settings-section">
+        <div class="setting-row">
+          <span class="setting-label">Today's Mission</span>
+          <label class="toggle">
+            <input type="checkbox" id="show-mission" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Tasks</span>
+          <label class="toggle">
+            <input type="checkbox" id="show-tasks" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Focus Session</span>
+          <label class="toggle">
+            <input type="checkbox" id="show-focus-session" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Focus Streak</span>
+          <label class="toggle">
+            <input type="checkbox" id="show-focus-streak" />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
       </section>
 

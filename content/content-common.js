@@ -11,6 +11,7 @@
     URL_CHANGED: 'URL_CHANGED',
     UNBLOCK_PAGE: 'UNBLOCK_PAGE',
     BREAK_ENDED: 'BREAK_ENDED',
+    RECORD_DISTRACTION_BLOCKED: 'RECORD_DISTRACTION_BLOCKED',
     ENABLE_CHILL: 'ENABLE_CHILL',
   };
 
@@ -225,9 +226,23 @@
 
   // ---- OVERLAY INJECTION (Shadow DOM) ----
   const OVERLAY_ID = 'focusguard-overlay-root';
+  let _pauseMediaInterval = null;
 
   function fgInjectOverlay(config) {
+    const isNew = !document.getElementById(OVERLAY_ID);
+    if (isNew) {
+      fgSendMessage({ type: FG_MSG.RECORD_DISTRACTION_BLOCKED }).catch(() => {});
+    }
     fgRemoveOverlay(); 
+
+    // Stop background media (Shorts/Reels) from playing while blocked
+    _pauseMediaInterval = setInterval(() => {
+      const mediaElements = document.querySelectorAll('video, audio');
+      mediaElements.forEach(media => {
+        if (!media.paused) media.pause();
+        if (!media.muted) media.muted = true;
+      });
+    }, 250);
 
     // Initialize the ThemeManager context (e.g. 'youtube' or 'instagram' or null)
     ThemeManager.init(config.site || null);
@@ -381,6 +396,15 @@
   }
 
   function fgRemoveOverlay() {
+    if (_pauseMediaInterval) {
+      clearInterval(_pauseMediaInterval);
+      _pauseMediaInterval = null;
+      // Optionally unmute videos when unblocked so they can be watched
+      document.querySelectorAll('video, audio').forEach(media => {
+        if (media.muted) media.muted = false;
+      });
+    }
+
     const existing = document.getElementById(OVERLAY_ID);
     if (existing) {
       if (existing._fgThemeUnsubscribe) {

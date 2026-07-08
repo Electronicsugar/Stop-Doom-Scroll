@@ -44,17 +44,13 @@ const headerBadges    = $('header-badges');
 // Focus Session Controls & Stats
 const focusStateBadge = $('focus-state-badge');
 const focusCtrlPrimary = $('focus-ctrl-primary');
-const focusEndRow = $('focus-end-row');
-const focusResetConfirm = $('focus-reset-confirm');
 const statFocused = $('stat-focused');
 const statBreaks = $('stat-breaks');
 const statStarted = $('stat-started');
 
-const focusPauseBtn = $('focus-pause-btn');
-const focusResumeBtn = $('focus-resume-btn');
-const focusResetBtn = $('focus-reset-btn');
-const focusResetCancel = $('focus-reset-cancel');
-const focusResetConfirmBtn = $('focus-reset-confirm-btn');
+const focusPlayPauseBtn = $('focus-play-pause-btn');
+const playPauseSwap = $('play-pause-swap');
+const focusStopBtn = $('focus-stop-btn');
 
 // ────────────────────────────────────────────
 // STATE
@@ -94,6 +90,23 @@ async function init() {
 // ────────────────────────────────────────────
 // RENDER (top-level)
 // ────────────────────────────────────────────
+function renderSectionsVisibility() {
+  const s = currentState.settings;
+  const toggleSec = (sec, show) => {
+    if (!sec) return;
+    sec.style.display = show ? '' : 'none';
+    const prev = sec.previousElementSibling;
+    if (prev && prev.classList.contains('section-divider')) {
+      prev.style.display = show ? '' : 'none';
+    }
+  };
+
+  toggleSec($('mission-section'), s?.showMission !== false);
+  toggleSec($('tasks-section'), s?.showTasks !== false);
+  toggleSec($('focus-section'), s?.showFocusSession !== false);
+  toggleSec($('streak-card'), s?.showFocusStreak !== false);
+}
+
 function render() {
   const s = currentState.session;
 
@@ -118,6 +131,7 @@ function render() {
   renderBreakButton();
   renderStreak();
   renderFocusSession();
+  renderSectionsVisibility();
 }
 
 // ────────────────────────────────────────────
@@ -146,21 +160,14 @@ function renderStreak() {
   if (!streak) return;
 
   const streakToday = $('streak-today');
-  const streakSession = $('streak-session');
+  const streakDistractions = $('streak-distractions');
   const streakLongest = $('streak-longest');
   const streakCurrentVal = $('streak-current-val');
 
   if (streakToday) streakToday.textContent = Math.round((streak.todayFocusMs || 0) / 60000) + 'm';
   
-  if (streakSession) {
-    const s = currentState.session;
-    let sessionMs = 0;
-    if (s && s.sessionState !== 'BREAK' && s.focusStartedAt) {
-      sessionMs = (Date.now() - s.focusStartedAt) + (s.accumulatedFocusMs || 0);
-    } else if (s) {
-      sessionMs = s.accumulatedFocusMs || 0;
-    }
-    streakSession.textContent = Math.round(sessionMs / 60000) + 'm';
+  if (streakDistractions) {
+    streakDistractions.textContent = streak.distractionsBlocked || 0;
   }
 
   if (streakLongest) streakLongest.textContent = Math.round((streak.longestSessionMs || 0) / 60000) + 'm';
@@ -197,21 +204,16 @@ function renderFocusSession() {
   }
 
   // Controls & Badge
-  if (focusPauseBtn && focusResumeBtn && focusResetConfirm && focusStateBadge && focusEndRow && focusCtrlPrimary) {
-    // Hide confirm by default on re-render
-    focusResetConfirm.hidden = true;
-    focusEndRow.hidden = false;
-    focusCtrlPrimary.hidden = false;
-    
+  if (focusPlayPauseBtn && focusStateBadge && focusCtrlPrimary) {
     if (s.sessionState === 'PAUSED') {
-      focusPauseBtn.hidden = true;
-      focusResumeBtn.hidden = false;
+      if (playPauseSwap) playPauseSwap.classList.add('paused');
+      focusPlayPauseBtn.setAttribute('aria-label', 'Resume focus session');
       
       focusStateBadge.className = 'session-badge session-badge--paused';
       focusStateBadge.querySelector('.badge-text').textContent = 'Paused';
     } else {
-      focusPauseBtn.hidden = false;
-      focusResumeBtn.hidden = true;
+      if (playPauseSwap) playPauseSwap.classList.remove('paused');
+      focusPlayPauseBtn.setAttribute('aria-label', 'Pause focus session');
       
       focusStateBadge.className = 'session-badge session-badge--focusing';
       focusStateBadge.querySelector('.badge-text').textContent = 'Focusing';
@@ -341,9 +343,9 @@ function handleDeleteTodo(id) {
 // BREAK FLOW — Step 1: CAPTCHA
 // ────────────────────────────────────────────
 function showBreakCaptcha() {
-  // Generate random CAPTCHA string
-  const len = CAPTCHA_CONFIG.minLength +
-    Math.floor(Math.random() * (CAPTCHA_CONFIG.maxLength - CAPTCHA_CONFIG.minLength + 1));
+  // Length is proportional to break duration
+  const breakMins = currentState.settings?.breakMaxMinutes || 10;
+  const len = Math.max(5, Math.min(30, breakMins));
   captchaText = '';
   for (let i = 0; i < len; i++) {
     captchaText += CAPTCHA_CONFIG.charset[
@@ -390,17 +392,18 @@ function generateCaptchaCanvas(text) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const tokens = FocusGuardTheme.getTokens(FocusGuardTheme.current());
+  const isDark = ThemeManager.getTheme() === 'dark';
+  const colors = ThemeManager.tokens.colors[isDark ? 'dark' : 'light'];
 
   // Background
-  ctx.fillStyle = tokens.colors.card;
+  ctx.fillStyle = colors.surfaceElevated;
   ctx.beginPath();
   ctx.roundRect(0, 0, W, H, 10);
   ctx.fill();
 
   // Noise dots
   for (let i = 0; i < 80; i++) {
-    ctx.fillStyle = tokens.colors.border;
+    ctx.fillStyle = colors.border;
     ctx.beginPath();
     ctx.arc(Math.random() * W, Math.random() * H,
             Math.random() * 2 + 0.5, 0, Math.PI * 2);
@@ -426,12 +429,12 @@ function generateCaptchaCanvas(text) {
     const fontSize = baseFont + (Math.random() * 4 - 2); // ±2px jitter
     ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
     
-    // Weighted probabilities: 40% charcoal, 30% sage, 20% olive, 10% gray-green
+    // Weighted probabilities: 40% primary, 30% sage, 20% olive, 10% gray-green
     const r = Math.random();
-    if (r > 0.9) ctx.fillStyle = '#7D8A79';       // 10% gray-green
-    else if (r > 0.7) ctx.fillStyle = '#606F5C';  // 20% olive
-    else if (r > 0.4) ctx.fillStyle = '#8F9E8B';  // 30% sage
-    else ctx.fillStyle = tokens.colors.ink;       // 40% charcoal / ink
+    if (r > 0.9) ctx.fillStyle = '#7D8A79';
+    else if (r > 0.7) ctx.fillStyle = '#606F5C';
+    else if (r > 0.4) ctx.fillStyle = '#8F9E8B';
+    else ctx.fillStyle = colors.textPrimary;
 
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
@@ -446,7 +449,7 @@ function generateCaptchaCanvas(text) {
 
   // Noise lines
   for (let i = 0; i < 3; i++) {
-    ctx.strokeStyle = tokens.colors.accentLight;
+    ctx.strokeStyle = colors.accentLight;
     ctx.lineWidth   = 0.8 + Math.random();
     ctx.beginPath();
     ctx.moveTo(Math.random() * W, Math.random() * H);
@@ -612,44 +615,36 @@ function setupEventListeners() {
   endBreakBtn.addEventListener('click', endBreakEarly);
 
   // Focus Session Controls
-  if (focusPauseBtn) focusPauseBtn.addEventListener('click', () => {
-    sendMessage({ type: MSG.PAUSE_SESSION }).then((res) => {
-      if (res && res.session) currentState.session = res.session;
-      render();
-      _tickFocusTimer();
-    });
-  });
-  if (focusResumeBtn) focusResumeBtn.addEventListener('click', () => {
-    sendMessage({ type: MSG.RESUME_SESSION }).then((res) => {
-      if (res && res.session) currentState.session = res.session;
-      render();
-      _tickFocusTimer();
-    });
-  });
-  
-  const showResetConfirm = () => {
-    focusCtrlPrimary.hidden = true;
-    focusEndRow.hidden = true;
-    focusResetConfirm.hidden = false;
-  };
-  
-  if (focusResetBtn) focusResetBtn.addEventListener('click', showResetConfirm);
-  if (focusResetCancel) focusResetCancel.addEventListener('click', () => render());
-  if (focusResetConfirmBtn) focusResetConfirmBtn.addEventListener('click', () => {
-    sendMessage({ type: MSG.RESET_SESSION }).then((res) => {
-      if (res && res.session) currentState.session = res.session;
-      // also clear todos since it's a new session
-      sendMessage({ type: MSG.GET_STATE }).then((state) => {
-        const s = state?.uiState || state;
-        if (s) {
-          currentState.todos = s.todos ?? [];
-          currentState.streak = s.streak ?? currentState.streak;
-          render();
-          _tickFocusTimer();
-        }
+  if (focusPlayPauseBtn) {
+    focusPlayPauseBtn.addEventListener('click', () => {
+      const isPaused = currentState.session?.sessionState === 'PAUSED';
+      const msgType = isPaused ? MSG.RESUME_SESSION : MSG.PAUSE_SESSION;
+      
+      sendMessage({ type: msgType }).then((res) => {
+        if (res && res.session) currentState.session = res.session;
+        render();
+        _tickFocusTimer();
       });
     });
-  });
+  }
+  
+  if (focusStopBtn) {
+    focusStopBtn.addEventListener('click', () => {
+      sendMessage({ type: MSG.RESET_SESSION }).then((res) => {
+        if (res && res.session) currentState.session = res.session;
+        // also clear todos since it's a new session
+        sendMessage({ type: MSG.GET_STATE }).then((state) => {
+          const s = state?.uiState || state;
+          if (s) {
+            currentState.todos = s.todos ?? [];
+            currentState.streak = s.streak ?? currentState.streak;
+            render();
+            _tickFocusTimer();
+          }
+        });
+      });
+    });
+  }
 
   // Settings
   settingsBtn.addEventListener('click', openSettings);

@@ -60,7 +60,7 @@
       <div class="section-divider"></div>
 
       <!-- SECTION 2: Today's Mission -->
-      <section class="card-section mission-section">
+      <section class="card-section mission-section" id="mission-section">
         <div class="section-label">TODAY'S MISSION</div>
         <div class="mission-goal" id="mission-goal">Add your goal above</div>
         <div class="progress-bar-wrap">
@@ -95,7 +95,7 @@
       <div class="section-divider"></div>
 
       <!-- SECTION 4: Focus Session -->
-      <section class="card-section focus-section">
+      <section class="card-section focus-section" id="focus-section">
         <div class="focus-header">
           <span class="section-label">FOCUS SESSION</span>
           <!-- Session state badge: updated by popup.js -->
@@ -107,12 +107,25 @@
 
         <div class="focus-body">
           <div class="focus-timer-block">
-            <div class="focus-timer" id="focus-timer-display">00:00:00</div>
-            <div class="focus-timer-sub">Focused Time (since last break)</div>
-            <div class="focus-mode-tags">
-              <span class="focus-tag">Deep Work</span>
-              <span class="focus-tag">No Distractions</span>
+            <div class="focus-timer-row">
+              <div class="focus-timer" id="focus-timer-display">00:00:00</div>
+              
+              <!-- Session Controls: Play/Pause, Stop -->
+              <div class="focus-controls" id="focus-controls">
+                <div class="focus-ctrl-row" id="focus-ctrl-primary">
+                  <button id="focus-play-pause-btn" class="fg-btn fg-btn-ghost fg-icon-only" aria-label="Pause focus session">
+                    <div class="icon-swap-container" id="play-pause-swap">
+                      <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                      <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </div>
+                  </button>
+                  <button id="focus-stop-btn" class="fg-btn fg-btn-danger fg-icon-only" aria-label="End focus session">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
+            <div class="focus-timer-sub">Focused Time (since last break)</div>
           </div>
           <!-- Decorative botanical -->
           <div class="focus-deco" aria-hidden="true">
@@ -124,36 +137,6 @@
               <path d="M30 38 Q42 28 40 15 Q32 22 30 36"/>
               <ellipse cx="30" cy="10" rx="3" ry="4" fill="currentColor" opacity="0.4"/>
             </svg>
-          </div>
-        </div>
-
-        <!-- Session Controls: Pause/Resume, End Session -->
-        <div class="focus-controls" id="focus-controls">
-          <div class="focus-ctrl-row" id="focus-ctrl-primary">
-            <button id="focus-pause-btn" class="fg-btn fg-btn-ghost fg-btn-sm" aria-label="Pause focus session">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-              Pause
-            </button>
-            <button id="focus-resume-btn" class="fg-btn fg-btn-accent fg-btn-sm" aria-label="Resume focus session" hidden>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Resume
-            </button>
-          </div>
-          
-          <div class="focus-end-row" id="focus-end-row">
-            <button id="focus-reset-btn" class="fg-btn fg-btn-ghost fg-btn-sm" aria-label="End focus session">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.45"/></svg>
-              End Session
-            </button>
-          </div>
-
-          <!-- End confirmation (inline, hidden by default) -->
-          <div class="focus-reset-confirm" id="focus-reset-confirm" hidden>
-            <span class="reset-confirm-text">End Focus Session?</span>
-            <div class="reset-confirm-actions">
-              <button id="focus-reset-cancel" class="fg-btn fg-btn-ghost fg-btn-xs">Cancel</button>
-              <button id="focus-reset-confirm-btn" class="fg-btn fg-btn-danger fg-btn-xs">End Session</button>
-            </div>
           </div>
         </div>
 
@@ -187,8 +170,8 @@
             <span class="streak-value" id="streak-today">0m</span>
           </div>
           <div class="streak-item">
-            <span class="streak-label">Current Session</span>
-            <span class="streak-value" id="streak-session">0m</span>
+            <span class="streak-label">Distractions Blocked</span>
+            <span class="streak-value" id="streak-distractions">0</span>
           </div>
           <div class="streak-item">
             <span class="streak-label">Longest Session</span>
@@ -214,7 +197,7 @@
             </svg>
           </span>
           <div class="break-cta-text">
-            <div class="break-cta-title">NEXT BREAK</div>
+            <div class="break-cta-title">BREAK</div>
             <div class="break-cta-desc" id="break-cta-desc">Take a 10 min break</div>
             <div class="break-cta-sub">You deserve it.</div>
           </div>
