@@ -41,6 +41,21 @@ const breakBtn        = $('break-btn');
 const settingsBtn     = $('settings-btn');
 const headerBadges    = $('header-badges');
 
+// Focus Session Controls & Stats
+const focusStateBadge = $('focus-state-badge');
+const focusCtrlPrimary = $('focus-ctrl-primary');
+const focusEndRow = $('focus-end-row');
+const focusResetConfirm = $('focus-reset-confirm');
+const statFocused = $('stat-focused');
+const statBreaks = $('stat-breaks');
+const statStarted = $('stat-started');
+
+const focusPauseBtn = $('focus-pause-btn');
+const focusResumeBtn = $('focus-resume-btn');
+const focusResetBtn = $('focus-reset-btn');
+const focusResetCancel = $('focus-reset-cancel');
+const focusResetConfirmBtn = $('focus-reset-confirm-btn');
+
 // ────────────────────────────────────────────
 // STATE
 // ────────────────────────────────────────────
@@ -48,27 +63,32 @@ let currentState = {
   session:  null,
   todos:    [],
   settings: null,
+  streak:   null,
 };
 let captchaText    = '';
 let breakInterval  = null;
 let totalBreakMs   = 0;      // total break duration so ring % is accurate
+let focusInterval  = null;   // setInterval handle for the focus session elapsed timer
 
 // ────────────────────────────────────────────
 // INIT
 // ────────────────────────────────────────────
 async function init() {
   try {
-    const state = await sendMessage({ type: MSG.GET_STATE });
+    const res = await sendMessage({ type: MSG.GET_STATE });
+    const state = res?.uiState || res;
     if (state) {
       currentState.session  = state.session  ?? null;
       currentState.todos    = state.todos    ?? [];
       currentState.settings = state.settings ?? null;
+      currentState.streak   = state.streak   ?? null;
     }
   } catch (err) {
     console.warn('[FocusGuard] Failed to fetch state:', err);
   }
   render();
   setupEventListeners();
+  startFocusTimer();
 }
 
 // ────────────────────────────────────────────
@@ -96,6 +116,8 @@ function render() {
   renderBadges();
   renderTodos();
   renderBreakButton();
+  renderStreak();
+  renderFocusSession();
 }
 
 // ────────────────────────────────────────────
@@ -113,6 +135,87 @@ function renderBadges() {
   if (s.breakModeActive) {
     headerBadges.insertAdjacentHTML('beforeend',
       '<span class="badge badge-break">☕ Break</span>');
+  }
+}
+
+// ────────────────────────────────────────────
+// STREAK
+// ────────────────────────────────────────────
+function renderStreak() {
+  const streak = currentState.streak;
+  if (!streak) return;
+
+  const streakToday = $('streak-today');
+  const streakSession = $('streak-session');
+  const streakLongest = $('streak-longest');
+  const streakCurrentVal = $('streak-current-val');
+
+  if (streakToday) streakToday.textContent = Math.round((streak.todayFocusMs || 0) / 60000) + 'm';
+  
+  if (streakSession) {
+    const s = currentState.session;
+    let sessionMs = 0;
+    if (s && s.sessionState !== 'BREAK' && s.focusStartedAt) {
+      sessionMs = (Date.now() - s.focusStartedAt) + (s.accumulatedFocusMs || 0);
+    } else if (s) {
+      sessionMs = s.accumulatedFocusMs || 0;
+    }
+    streakSession.textContent = Math.round(sessionMs / 60000) + 'm';
+  }
+
+  if (streakLongest) streakLongest.textContent = Math.round((streak.longestSessionMs || 0) / 60000) + 'm';
+  if (streakCurrentVal) streakCurrentVal.textContent = (streak.currentStreak || 0) + ' days';
+}
+
+// ────────────────────────────────────────────
+// FOCUS SESSION
+// ────────────────────────────────────────────
+function renderFocusSession() {
+  const s = currentState.session;
+  if (!s) return;
+
+  // Stats
+  let sessionMs = 0;
+  if (s.sessionState !== 'BREAK' && s.focusStartedAt) {
+    sessionMs = (Date.now() - s.focusStartedAt) + (s.accumulatedFocusMs || 0);
+  } else {
+    sessionMs = s.accumulatedFocusMs || 0;
+  }
+  
+  if (statFocused) statFocused.textContent = Math.round(sessionMs / 60000) + 'm';
+  if (statBreaks) statBreaks.textContent = s.breakCount || 0;
+  
+  if (statStarted && s.sessionStartedAt) {
+    const d = new Date(s.sessionStartedAt);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    statStarted.textContent = `${h}:${m} ${ampm}`;
+  } else if (statStarted) {
+    statStarted.textContent = '—';
+  }
+
+  // Controls & Badge
+  if (focusPauseBtn && focusResumeBtn && focusResetConfirm && focusStateBadge && focusEndRow && focusCtrlPrimary) {
+    // Hide confirm by default on re-render
+    focusResetConfirm.hidden = true;
+    focusEndRow.hidden = false;
+    focusCtrlPrimary.hidden = false;
+    
+    if (s.sessionState === 'PAUSED') {
+      focusPauseBtn.hidden = true;
+      focusResumeBtn.hidden = false;
+      
+      focusStateBadge.className = 'session-badge session-badge--paused';
+      focusStateBadge.querySelector('.badge-text').textContent = 'Paused';
+    } else {
+      focusPauseBtn.hidden = false;
+      focusResumeBtn.hidden = true;
+      
+      focusStateBadge.className = 'session-badge session-badge--focusing';
+      focusStateBadge.querySelector('.badge-text').textContent = 'Focusing';
+    }
   }
 }
 
@@ -287,16 +390,17 @@ function generateCaptchaCanvas(text) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
+  const tokens = FocusGuardTheme.getTokens(FocusGuardTheme.current());
+
   // Background
-  ctx.fillStyle = '#1a1a2e';
+  ctx.fillStyle = tokens.colors.card;
   ctx.beginPath();
   ctx.roundRect(0, 0, W, H, 10);
   ctx.fill();
 
   // Noise dots
   for (let i = 0; i < 80; i++) {
-    ctx.fillStyle =
-      `rgba(${r255()},${r255()},${r255()},0.15)`;
+    ctx.fillStyle = tokens.colors.border;
     ctx.beginPath();
     ctx.arc(Math.random() * W, Math.random() * H,
             Math.random() * 2 + 0.5, 0, Math.PI * 2);
@@ -321,8 +425,14 @@ function generateCaptchaCanvas(text) {
   for (let i = 0; i < text.length; i++) {
     const fontSize = baseFont + (Math.random() * 4 - 2); // ±2px jitter
     ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
-    const hue = 250 + Math.random() * 60;            // purple-blue range
-    ctx.fillStyle   = `hsl(${hue}, 70%, 70%)`;
+    
+    // Weighted probabilities: 40% charcoal, 30% sage, 20% olive, 10% gray-green
+    const r = Math.random();
+    if (r > 0.9) ctx.fillStyle = '#7D8A79';       // 10% gray-green
+    else if (r > 0.7) ctx.fillStyle = '#606F5C';  // 20% olive
+    else if (r > 0.4) ctx.fillStyle = '#8F9E8B';  // 30% sage
+    else ctx.fillStyle = tokens.colors.ink;       // 40% charcoal / ink
+
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.save();
@@ -336,7 +446,7 @@ function generateCaptchaCanvas(text) {
 
   // Noise lines
   for (let i = 0; i < 3; i++) {
-    ctx.strokeStyle = `rgba(124, 58, 237, ${0.2 + Math.random() * 0.2})`;
+    ctx.strokeStyle = tokens.colors.accentLight;
     ctx.lineWidth   = 0.8 + Math.random();
     ctx.beginPath();
     ctx.moveTo(Math.random() * W, Math.random() * H);
@@ -419,8 +529,13 @@ function updateTimerDisplay(remainingMs) {
   const totalSec = Math.ceil(remainingMs / 1000);
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
-  timerDisplay.textContent =
-    `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  
+  const timeStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  timerDisplay.innerHTML = `
+    <div style="font-size: 12px; font-weight: 500; opacity: 0.6; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">On Break</div>
+    <div>${timeStr}</div>
+    <div style="font-size: 11px; opacity: 0.5; margin-top: 2px;">remaining</div>
+  `;
 
   // SVG ring progress
   const circumference = 2 * Math.PI * 54;          // r = 54
@@ -496,9 +611,135 @@ function setupEventListeners() {
   // Break active
   endBreakBtn.addEventListener('click', endBreakEarly);
 
+  // Focus Session Controls
+  if (focusPauseBtn) focusPauseBtn.addEventListener('click', () => {
+    sendMessage({ type: MSG.PAUSE_SESSION }).then((res) => {
+      if (res && res.session) currentState.session = res.session;
+      render();
+      _tickFocusTimer();
+    });
+  });
+  if (focusResumeBtn) focusResumeBtn.addEventListener('click', () => {
+    sendMessage({ type: MSG.RESUME_SESSION }).then((res) => {
+      if (res && res.session) currentState.session = res.session;
+      render();
+      _tickFocusTimer();
+    });
+  });
+  
+  const showResetConfirm = () => {
+    focusCtrlPrimary.hidden = true;
+    focusEndRow.hidden = true;
+    focusResetConfirm.hidden = false;
+  };
+  
+  if (focusResetBtn) focusResetBtn.addEventListener('click', showResetConfirm);
+  if (focusResetCancel) focusResetCancel.addEventListener('click', () => render());
+  if (focusResetConfirmBtn) focusResetConfirmBtn.addEventListener('click', () => {
+    sendMessage({ type: MSG.RESET_SESSION }).then((res) => {
+      if (res && res.session) currentState.session = res.session;
+      // also clear todos since it's a new session
+      sendMessage({ type: MSG.GET_STATE }).then((state) => {
+        const s = state?.uiState || state;
+        if (s) {
+          currentState.todos = s.todos ?? [];
+          currentState.streak = s.streak ?? currentState.streak;
+          render();
+          _tickFocusTimer();
+        }
+      });
+    });
+  });
+
   // Settings
   settingsBtn.addEventListener('click', openSettings);
+
+  // Stop focus timer when the popup is closed to free the interval
+  window.addEventListener('unload', stopFocusTimer);
 }
+
+// ────────────────────────────────────────────
+// FOCUS SESSION ELAPSED TIMER
+// ────────────────────────────────────────────
+
+/**
+ * Formats elapsed milliseconds as HH:MM:SS.
+ * Returns '--:--:--' when ms is null/undefined (break active).
+ */
+function formatElapsed(ms) {
+  if (ms == null || ms < 0) return '--:--:--';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return (
+    String(h).padStart(2, '0') + ':' +
+    String(m).padStart(2, '0') + ':' +
+    String(s).padStart(2, '0')
+  );
+}
+
+/** Writes the current elapsed time to #focus-timer-display. */
+function _tickFocusTimer() {
+  const el = document.getElementById('focus-timer-display');
+  if (!el) return;
+  const s = currentState.session;
+  if (s && s.sessionState === 'PAUSED') {
+    // If paused, just display the accumulated focus
+    el.textContent = formatElapsed(s.accumulatedFocusMs || 0);
+  } else {
+    const start = s?.focusStartedAt;
+    // Compute elapsed from the stored timestamp every tick — never drifts
+    // even if the browser was suspended between ticks.
+    let elapsed = null;
+    if (start) {
+      elapsed = (Date.now() - start) + (s.accumulatedFocusMs || 0);
+    } else if (s && s.accumulatedFocusMs) {
+      elapsed = s.accumulatedFocusMs;
+    }
+    el.textContent = formatElapsed(elapsed);
+  }
+}
+
+/** Starts the focus timer ticker. Clears any existing interval first. */
+function startFocusTimer() {
+  stopFocusTimer();
+  _tickFocusTimer();              // Immediate paint so there's no 1s blank
+  focusInterval = setInterval(_tickFocusTimer, 1000);
+}
+
+/** Stops the focus timer ticker. */
+function stopFocusTimer() {
+  if (focusInterval) {
+    clearInterval(focusInterval);
+    focusInterval = null;
+  }
+}
+
+// ── Cross-window storage sync ────────────────────────────────────────────────
+// When the user triggers a break or ends a break from another popup window
+// (or the background alarm fires), the session key changes in storage.
+// We listen here so the displayed timer updates immediately without requiring
+// the user to close and reopen the popup.
+api.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (!changes.fg_session) return;
+
+  const newSession = changes.fg_session.newValue;
+  if (!newSession) return;
+
+  const prev = currentState.session;
+  currentState.session = newSession;
+
+  // If break state changed, re-render the full popup (shows/hides ring countdown)
+  if (prev?.breakModeActive !== newSession.breakModeActive ||
+      prev?.breakExpiresAt  !== newSession.breakExpiresAt) {
+    render();
+  }
+
+  // Always update the focus timer display to reflect the new focusStartedAt
+  _tickFocusTimer();
+});
 
 // ────────────────────────────────────────────
 // BOOT

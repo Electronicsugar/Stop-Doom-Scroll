@@ -3,134 +3,293 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FocusGuard</title>
-
-  <!-- Google Fonts — Inter (300–700) -->
+  <title>Sage</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
     rel="stylesheet"
   />
-
-  <!-- Popup stylesheet -->
   <link rel="stylesheet" href="popup.css" />
+  <script src="../lib/theme.js"></script>
 </head>
 <body>
   <div class="popup-container">
 
     <!-- ====== HEADER ====== -->
     <header class="popup-header">
-      <div class="header-badges" id="header-badges"></div>
-      <div class="logo-area">
-        <span class="logo-icon">🛡️</span>
-        <span class="logo-mark">FocusGuard</span>
+      <div class="header-left">
+        <div class="header-badges" id="header-badges"></div>
+        <span class="logo-mark">SAGE</span>
+      </div>
+      <div class="header-right">
+        <button class="hdr-icon-btn" id="analytics-btn" title="Analytics" aria-label="Analytics">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </button>
+        <button class="hdr-icon-btn" id="settings-btn" title="Settings" aria-label="Settings">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
       </div>
     </header>
-
+    <div class="hdr-divider"></div>
 
     <!-- ====== MAIN CONTENT ====== -->
     <main class="popup-main" id="popup-main">
-      <!-- Task input -->
-      <div class="input-area">
-        <input
-          type="text"
-          id="task-input"
-          placeholder="Add a task..."
-          autocomplete="off"
-        />
-        <button id="add-btn" class="btn btn-add" title="Add task">+</button>
-      </div>
 
-      <!-- Todo list -->
-      <div class="todo-section">
-        <ul class="todo-list" id="todo-list"></ul>
-        <div class="todo-empty" id="todo-empty">
-          <p>No tasks yet. Add one above! ✨</p>
+      <!-- SECTION 1: Date + Quote -->
+      <section class="card-section date-quote-section">
+        <div class="date-block">
+          <div class="date-day-name" id="date-day-name">MONDAY</div>
+          <div class="date-num" id="date-num">07</div>
+          <div class="date-month-year" id="date-month-year">JULY 2026</div>
         </div>
-      </div>
+        <div class="sticky-note-wrap">
+          <div class="sticky-note">
+            <p class="sticky-quote" id="sticky-quote">Discipline today,<br>freedom tomorrow.</p>
+            <p class="sticky-author" id="sticky-author">— Unknown</p>
+            <div class="sticky-underline"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION 2: Today's Mission -->
+      <section class="card-section mission-section">
+        <div class="section-label">TODAY'S MISSION</div>
+        <div class="mission-goal" id="mission-goal">Add your goal above</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar-fill" style="width:0%"></div>
+          </div>
+          <span class="progress-pct" id="progress-pct">0%</span>
+        </div>
+        <div class="estimated-time" id="estimated-time">Estimated time: —</div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION 3: Tasks -->
+      <section class="card-section tasks-section" id="tasks-section">
+        <div class="tasks-header">
+          <span class="section-label">TASKS</span>
+          <span class="task-count" id="task-count"></span>
+        </div>
+        <div class="input-area">
+          <input type="text" id="task-input" placeholder="What is your goal for today?" autocomplete="off" />
+          <button id="add-btn" class="btn btn-add" title="Add task" aria-label="Add task">+</button>
+        </div>
+        <div class="todo-section">
+          <ul class="todo-list" id="todo-list"></ul>
+          <div class="todo-empty" id="todo-empty">
+            <p>No tasks yet. Add one above! ✨</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION 4: Focus Session -->
+      <section class="card-section focus-section">
+        <div class="focus-header">
+          <span class="section-label">FOCUS SESSION</span>
+          <!-- Session state badge: updated by popup.js -->
+          <span class="session-badge session-badge--focusing" id="focus-state-badge" aria-live="polite">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Focusing</span>
+          </span>
+        </div>
+
+        <div class="focus-body">
+          <div class="focus-timer-block">
+            <div class="focus-timer" id="focus-timer-display">00:00:00</div>
+            <div class="focus-timer-sub">Focused Time (since last break)</div>
+            <div class="focus-mode-tags">
+              <span class="focus-tag">Deep Work</span>
+              <span class="focus-tag">No Distractions</span>
+            </div>
+          </div>
+          <!-- Decorative botanical -->
+          <div class="focus-deco" aria-hidden="true">
+            <svg viewBox="0 0 60 90" width="46" height="69" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+              <line x1="30" y1="88" x2="30" y2="10"/>
+              <path d="M30 60 Q15 50 12 35 Q22 40 30 55"/>
+              <path d="M30 50 Q45 38 46 22 Q36 29 30 46"/>
+              <path d="M30 72 Q18 65 16 52 Q25 56 30 68"/>
+              <path d="M30 38 Q42 28 40 15 Q32 22 30 36"/>
+              <ellipse cx="30" cy="10" rx="3" ry="4" fill="currentColor" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Session Controls: Pause/Resume, End Session -->
+        <div class="focus-controls" id="focus-controls">
+          <div class="focus-ctrl-row" id="focus-ctrl-primary">
+            <button id="focus-pause-btn" class="fg-btn fg-btn-ghost fg-btn-sm" aria-label="Pause focus session">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              Pause
+            </button>
+            <button id="focus-resume-btn" class="fg-btn fg-btn-accent fg-btn-sm" aria-label="Resume focus session" hidden>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Resume
+            </button>
+          </div>
+          
+          <div class="focus-end-row" id="focus-end-row">
+            <button id="focus-reset-btn" class="fg-btn fg-btn-ghost fg-btn-sm" aria-label="End focus session">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.45"/></svg>
+              End Session
+            </button>
+          </div>
+
+          <!-- End confirmation (inline, hidden by default) -->
+          <div class="focus-reset-confirm" id="focus-reset-confirm" hidden>
+            <span class="reset-confirm-text">End Focus Session?</span>
+            <div class="reset-confirm-actions">
+              <button id="focus-reset-cancel" class="fg-btn fg-btn-ghost fg-btn-xs">Cancel</button>
+              <button id="focus-reset-confirm-btn" class="fg-btn fg-btn-danger fg-btn-xs">End Session</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session stats: Focused / Breaks / Started -->
+        <div class="session-stats" id="session-stats">
+          <div class="stat-item">
+            <span class="stat-label">Focused</span>
+            <span class="stat-value" id="stat-focused">0m</span>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <span class="stat-label">Breaks</span>
+            <span class="stat-value" id="stat-breaks">0</span>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <span class="stat-label">Started</span>
+            <span class="stat-value" id="stat-started">—</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION 5: Focus Streak -->
+      <section class="card-section streak-section" id="streak-card">
+        <div class="section-label">🔥 FOCUS STREAK</div>
+        <div class="streak-grid">
+          <div class="streak-item">
+            <span class="streak-label">Today's Focus</span>
+            <span class="streak-value" id="streak-today">0m</span>
+          </div>
+          <div class="streak-item">
+            <span class="streak-label">Current Session</span>
+            <span class="streak-value" id="streak-session">0m</span>
+          </div>
+          <div class="streak-item">
+            <span class="streak-label">Longest Session</span>
+            <span class="streak-value" id="streak-longest">—</span>
+          </div>
+          <div class="streak-item">
+            <span class="streak-label">Current Streak</span>
+            <span class="streak-value" id="streak-current-val">0 days</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION 6: Next Break -->
+      <section class="card-section break-cta-section popup-footer" id="popup-footer">
+        <div class="break-cta-left">
+          <span class="break-cta-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+              <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+            </svg>
+          </span>
+          <div class="break-cta-text">
+            <div class="break-cta-title">NEXT BREAK</div>
+            <div class="break-cta-desc" id="break-cta-desc">Take a 10 min break</div>
+            <div class="break-cta-sub">You deserve it.</div>
+          </div>
+        </div>
+        <button id="break-btn" class="btn-take-break" title="Take a break" aria-label="Take a break">Take Break</button>
+      </section>
+
+      <div class="footer-quote">Stay focused. Make it happen.</div>
+
     </main>
 
-    <!-- ====== BREAK CAPTCHA ====== -->
+    <!-- ====== BREAK CAPTCHA OVERLAY ====== -->
     <section class="break-section" id="break-section">
       <div class="break-inner">
-        <h3>Take a Break</h3>
-        <p class="break-desc">Type the text below to prove you really want a break:</p>
+        <!-- Paper-style header -->
+        <div class="break-section-header">
+          <div class="break-section-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+              <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+            </svg>
+          </div>
+          <h2 class="break-section-title">Take a Break</h2>
+          <p class="break-desc">Type the text below to prove you really want a break.</p>
+        </div>
         <div id="captcha-container" class="captcha-container"></div>
-        <input
-          type="text"
-          id="captcha-input"
-          placeholder="Type the text above..."
-          autocomplete="off"
-        />
+        <input type="text" id="captcha-input" placeholder="Type the text above..." autocomplete="off" aria-label="CAPTCHA input" />
         <div class="captcha-actions">
-          <button id="captcha-verify-btn" class="btn btn-primary">Verify</button>
-          <button id="captcha-cancel-btn" class="btn btn-ghost">Cancel</button>
+          <button id="captcha-verify-btn" class="fg-btn fg-btn-primary">Verify &amp; Start Break</button>
+          <button id="captcha-cancel-btn" class="fg-btn fg-btn-ghost">Cancel</button>
         </div>
         <p class="captcha-error" id="captcha-error">Incorrect. Try again!</p>
       </div>
     </section>
 
-
-
     <!-- ====== BREAK ACTIVE COUNTDOWN ====== -->
     <section class="break-active-section" id="break-active-section">
       <div class="break-active-inner">
+        <!-- Botanical illustration -->
+        <div class="break-botanical" aria-hidden="true">
+          <svg viewBox="0 0 80 80" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+            <line x1="40" y1="75" x2="40" y2="20"/>
+            <path d="M40 55 Q25 44 22 30 Q33 36 40 52"/>
+            <path d="M40 45 Q55 33 56 18 Q46 26 40 42"/>
+            <path d="M40 65 Q28 58 26 46 Q35 50 40 62"/>
+            <ellipse cx="40" cy="20" rx="4" ry="5" fill="currentColor" opacity="0.35"/>
+          </svg>
+        </div>
+
+        <!-- Ring timer -->
         <div class="break-timer-ring" id="break-timer-ring">
           <svg viewBox="0 0 120 120">
             <defs>
               <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#7c3aed" />
-                <stop offset="100%" stop-color="#3b82f6" />
+                <stop offset="0%"   stop-color="#7A8F72" />
+                <stop offset="100%" stop-color="#4a6741" />
               </linearGradient>
             </defs>
             <circle class="ring-bg" cx="60" cy="60" r="54" />
-            <circle
-              class="ring-progress"
-              id="ring-progress"
-              cx="60"
-              cy="60"
-              r="54"
-            />
+            <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="54" />
           </svg>
-          <div class="timer-display" id="timer-display">15:00</div>
+          <div class="timer-display-break" id="timer-display">15:00</div>
         </div>
-        <p class="break-status">Break Mode Active</p>
-        <p class="break-status-sub">Enjoy your break! Feeds are unblocked.</p>
-        <button id="end-break-btn" class="btn btn-danger">End Break Early</button>
+
+        <h2 class="break-active-title">Break Time</h2>
+        <p class="break-status">Enjoy your break. Feeds are unblocked.</p>
+        <p class="break-status-sub break-quote"><em>Rest is productive too.</em></p>
+        <button id="end-break-btn" class="fg-btn fg-btn-outline-danger">End Break Early</button>
       </div>
     </section>
 
-    <!-- ====== FOOTER ====== -->
-    <footer class="popup-footer" id="popup-footer">
-      <button id="break-btn" class="btn btn-outline" title="Take a break">
-        <span class="btn-icon">☕</span> Take a break
-      </button>
-      <button id="settings-btn" class="btn btn-icon-only" title="Settings">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83
-            2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0
-            0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9
-            19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0
-            1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0
-            0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6
-            9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1
-            2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0
-            1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1
-            1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0
-            1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0
-            1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0
-            0-1.51 1z"/>
-        </svg>
-      </button>
-    </footer>
+  </div><!-- /popup-container -->
 
-  </div>
-
-  <!-- Popup logic (ES module) -->
+  <script src="popup-ui.js"></script>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

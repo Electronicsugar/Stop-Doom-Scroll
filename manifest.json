@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "FocusGuard",
+  "name": "Sage",
   "version": "1.0.0",
   "description": "Stay focused. Block doomscrolling. Achieve your goals.",
 
@@ -36,13 +36,13 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["content/content-common.js", "content/content-youtube.js"],
+      "js": ["lib/theme.js", "content/content-common.js", "content/content-youtube.js"],
       "css": ["content/overlay.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["*://*.instagram.com/*"],
-      "js": ["content/content-common.js", "content/content-instagram.js"],
+      "js": ["lib/theme.js", "content/content-common.js", "content/content-instagram.js"],
       "css": ["content/overlay.css"],
       "run_at": "document_idle"
     }

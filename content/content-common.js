@@ -71,194 +71,292 @@
     }
   });
 
+  // ============================================================
+  //  THEME DETECTION (shared by all content scripts)
+  //
+  //  Returns true if the host site is using a dark color scheme.
+  //
+  //  Detection priority (highest to lowest reliability):
+  //    1. Site-specific DOM signals (most reliable — never wrong)
+  //    2. meta[name="color-scheme"] (Instagram / general sites)
+  //    3. document.documentElement.style.colorScheme
+  //    4. window.matchMedia('prefers-color-scheme: dark')
+  //    5. Computed background luminance (last resort)
+  //
+  //  The 'site' param ('youtube' | 'instagram' | null) enables
+  //  site-specific checks first before falling through to generics.
+  // ============================================================
+
+  // ============================================================
+  //  UI BUILDERS (Shared for all content scripts)
+  //  These consume CSS variables defined by ThemeManager
+  // ============================================================
+
+  const FGUI = {
+    _recentQuotes: [],
+    _quotes: [
+      "Discipline today, freedom tomorrow.",
+      "Your focus is your future.",
+      "Is this getting you closer to your goal?",
+      "Take a breath. Return to center.",
+      "Don't trade what you want most for what you want now.",
+      "The task at hand is all that matters.",
+      "Control your attention, control your life.",
+      "Focus is a muscle. Flex it."
+    ],
+
+    createQuote: function() {
+      const available = this._quotes.filter(q => !this._recentQuotes.includes(q));
+      const pool = available.length > 0 ? available : this._quotes;
+      const quote = pool[Math.floor(Math.random() * pool.length)];
+      
+      this._recentQuotes.push(quote);
+      if (this._recentQuotes.length > 3) this._recentQuotes.shift();
+      
+      return quote;
+    },
+
+    createLogo: function() {
+      const container = document.createElement('div');
+      container.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: var(--fg-spacing-lg);
+      `;
+      
+      const brand = document.createElement('div');
+      brand.textContent = 'SAGE';
+      brand.style.cssText = `
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        color: var(--fg-text-muted);
+      `;
+
+      const leaf = document.createElement('div');
+      leaf.innerHTML = `
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--fg-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      `;
+      
+      container.appendChild(brand);
+      container.appendChild(leaf);
+      return container;
+    },
+
+    createHeading: function(text) {
+      const h2 = document.createElement('h2');
+      h2.textContent = text;
+      h2.style.cssText = `
+        font-family: var(--fg-font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--fg-text-primary);
+        margin-bottom: var(--fg-spacing-sm);
+        line-height: 1.2;
+      `;
+      return h2;
+    },
+
+    createButton: function(text, variant) {
+      const btn = document.createElement('button');
+      btn.textContent = text;
+      btn.className = 'fg-btn fg-btn-' + variant;
+      
+      let bg, color, border;
+      if (variant === 'primary') {
+        bg = 'var(--fg-text-primary)';
+        color = 'var(--fg-bg-primary)';
+        border = 'none';
+      } else if (variant === 'chill') {
+        bg = 'rgba(16, 185, 129, 0.15)';
+        color = '#059669';
+        border = '1px solid rgba(16, 185, 129, 0.3)';
+        // Note: In CSS we should adapt this for dark mode. We can use variables for chill too.
+      } else {
+        bg = 'var(--fg-btn-ghost-bg)';
+        color = 'var(--fg-btn-ghost-text)';
+        border = '1px solid var(--fg-border)';
+      }
+
+      btn.style.cssText = `
+        padding: 12px 24px;
+        border-radius: var(--fg-radius-btn);
+        font-family: var(--fg-font-body);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        background: ${bg};
+        color: ${color};
+        border: ${border};
+        transition: all var(--fg-duration-fast) var(--fg-curve);
+      `;
+      
+      btn.onmouseover = () => btn.style.transform = 'translateY(-1px)';
+      btn.onmouseout = () => btn.style.transform = 'none';
+      btn.onmousedown = () => btn.style.transform = 'scale(0.97)';
+      btn.onmouseup = () => btn.style.transform = 'translateY(-1px)';
+
+      return btn;
+    },
+
+    createCard: function() {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: var(--fg-surface);
+        border: var(--fg-border-width) solid var(--fg-border);
+        border-radius: var(--fg-radius-card);
+        padding: var(--fg-spacing-xl) var(--fg-spacing-xl);
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+        box-shadow: var(--fg-shadow-card);
+        animation: fgScaleIn var(--fg-duration-normal) var(--fg-curve);
+        position: relative;
+        overflow: hidden;
+      `;
+      return card;
+    }
+  };
+
   // ---- OVERLAY INJECTION (Shadow DOM) ----
   const OVERLAY_ID = 'focusguard-overlay-root';
 
   function fgInjectOverlay(config) {
-    // config: { message, showChillPrompt, showGoBack }
-    fgRemoveOverlay(); // Remove existing overlay first
+    fgRemoveOverlay(); 
 
+    // Initialize the ThemeManager context (e.g. 'youtube' or 'instagram' or null)
+    ThemeManager.init(config.site || null);
+    
     const host = document.createElement('div');
     host.id = OVERLAY_ID;
-    host.style.cssText = 'position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;pointer-events:auto!important;';
+    host.style.cssText = `
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 2147483647 !important;
+      pointer-events: auto !important;
+    `;
+    ThemeManager.applyTheme(host); // set data-theme
 
     const shadow = host.attachShadow({ mode: 'closed' });
-
     const style = document.createElement('style');
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+      
+      :host {
+        ${ThemeManager.getCssVariableString('light')}
+      }
+      :host([data-theme="dark"]) {
+        ${ThemeManager.getCssVariableString('dark')}
+      }
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
-
-      .fg-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(5, 5, 20, 0.92);
-        backdrop-filter: blur(20px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        animation: fgFadeIn 0.4s ease;
-      }
-
-      .fg-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 40px 48px;
-        max-width: 480px;
-        width: 90%;
-        text-align: center;
-        backdrop-filter: blur(30px);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-        animation: fgScaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-      }
-
-      .fg-shield {
-        font-size: 48px;
-        margin-bottom: 16px;
-        display: block;
-        filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
-      }
-
-      .fg-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #e2e8f0;
-        margin-bottom: 12px;
-        line-height: 1.3;
-      }
-
-      .fg-message {
-        font-size: 15px;
-        color: rgba(255, 255, 255, 0.6);
-        line-height: 1.6;
-        margin-bottom: 28px;
-      }
-
-      .fg-goal-text {
-        display: inline-block;
-        background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(59,130,246,0.2));
-        border: 1px solid rgba(124,58,237,0.3);
-        border-radius: 8px;
-        padding: 8px 16px;
-        margin-top: 8px;
-        color: #c4b5fd;
-        font-weight: 500;
-        font-size: 14px;
-      }
-
-      .fg-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .fg-btn {
-        padding: 12px 28px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        font-family: inherit;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-
-      .fg-btn:hover { transform: translateY(-1px); }
-      .fg-btn:active { transform: translateY(0); }
-
-      .fg-btn-primary {
-        background: linear-gradient(135deg, #7c3aed, #3b82f6);
-        color: white;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-      }
-      .fg-btn-primary:hover { box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4); }
-
-      .fg-btn-ghost {
-        background: rgba(255,255,255,0.06);
-        color: rgba(255,255,255,0.7);
-        border: 1px solid rgba(255,255,255,0.1);
-      }
-      .fg-btn-ghost:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
-
+      @keyframes fgFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes fgScaleIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: none; } }
+      
       .fg-btn-chill {
-        background: rgba(16, 185, 129, 0.15);
-        color: #6ee7b7;
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: #059669 !important;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
       }
-      .fg-btn-chill:hover { background: rgba(16, 185, 129, 0.25); }
-
-      @keyframes fgFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+      :host([data-theme="dark"]) .fg-btn-chill {
+        color: #6ee7b7 !important;
       }
 
-      @keyframes fgScaleIn {
-        from { opacity: 0; transform: scale(0.9) translateY(10px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
+      @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
     `;
     shadow.appendChild(style);
 
     const backdrop = document.createElement('div');
-    backdrop.className = 'fg-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: var(--fg-bg-primary);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--fg-font-body);
+      animation: fgFadeIn var(--fg-duration-normal) var(--fg-curve);
+    `;
 
-    const card = document.createElement('div');
-    card.className = 'fg-card';
-
-    // Shield icon
-    const shield = document.createElement('span');
-    shield.className = 'fg-shield';
-    shield.textContent = '🛡️';
-    card.appendChild(shield);
+    const card = FGUI.createCard();
+    
+    // Logo
+    card.appendChild(FGUI.createLogo());
 
     // Title
-    const title = document.createElement('h2');
-    title.className = 'fg-title';
-    title.textContent = config.showChillPrompt ? 'Do you want to chill today?' : 'Stay Focused';
-    card.appendChild(title);
+    card.appendChild(FGUI.createHeading(
+      config.showChillPrompt ? 'Do you want to chill today?' : 'Stay Focused'
+    ));
 
     // Message
     const msg = document.createElement('p');
-    msg.className = 'fg-message';
     msg.textContent = config.message;
+    msg.style.cssText = `
+      font-size: 15px;
+      color: var(--fg-text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--fg-spacing-lg);
+    `;
     card.appendChild(msg);
+
+    // Quote Box (only if not chilling)
+    if (!config.showChillPrompt) {
+      const quoteBox = document.createElement('div');
+      quoteBox.style.cssText = `
+        background: var(--fg-accent-light);
+        border-radius: var(--fg-radius-sm);
+        padding: var(--fg-spacing-md);
+        margin-bottom: var(--fg-spacing-lg);
+        color: var(--fg-text-muted);
+        font-style: italic;
+        font-size: 13px;
+      `;
+      quoteBox.textContent = `"${FGUI.createQuote()}"`;
+      card.appendChild(quoteBox);
+    }
 
     // Actions
     const actions = document.createElement('div');
-    actions.className = 'fg-actions';
+    actions.style.cssText = `
+      display: flex;
+      gap: var(--fg-spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+    `;
 
     if (config.showChillPrompt) {
-      const chillBtn = document.createElement('button');
-      chillBtn.className = 'fg-btn fg-btn-chill';
-      chillBtn.textContent = 'I want to chill';
+      const chillBtn = FGUI.createButton('I want to chill', 'chill');
       chillBtn.addEventListener('click', () => {
         fgSendMessage({ type: FG_MSG.ENABLE_CHILL });
         fgRemoveOverlay();
       });
       actions.appendChild(chillBtn);
 
-      const blockBtn = document.createElement('button');
-      blockBtn.className = 'fg-btn fg-btn-primary';
-      blockBtn.textContent = 'No, block me';
+      const blockBtn = FGUI.createButton('No, block me', 'primary');
       blockBtn.addEventListener('click', () => {
-        // Stay blocked - just dismiss the chill prompt aspect
-        // Re-render with a standard block message
         fgRemoveOverlay();
         fgInjectOverlay({
           message: "Good choice! Stay focused. You've got this.",
           showChillPrompt: false,
           showGoBack: true,
+          site: config.site,
         });
       });
       actions.appendChild(blockBtn);
     } else {
-      const goBackBtn = document.createElement('button');
-      goBackBtn.className = 'fg-btn fg-btn-primary';
-      goBackBtn.textContent = 'Go Back';
+      const goBackBtn = FGUI.createButton('← Back to Focus', 'primary');
       goBackBtn.addEventListener('click', () => {
         history.back();
         setTimeout(() => fgRemoveOverlay(), 300);
@@ -270,11 +368,26 @@
     backdrop.appendChild(card);
     shadow.appendChild(backdrop);
     document.documentElement.appendChild(host);
+
+    // Reactive theme tracking: subscribe to ThemeManager and update data-theme
+    const onThemeChange = (theme) => {
+      const existing = document.getElementById(OVERLAY_ID);
+      if (existing) {
+        ThemeManager.applyTheme(existing);
+      }
+    };
+    ThemeManager.subscribe(onThemeChange);
+    host._fgThemeUnsubscribe = () => ThemeManager.unsubscribe(onThemeChange);
   }
 
   function fgRemoveOverlay() {
     const existing = document.getElementById(OVERLAY_ID);
-    if (existing) existing.remove();
+    if (existing) {
+      if (existing._fgThemeUnsubscribe) {
+        existing._fgThemeUnsubscribe();
+      }
+      existing.remove();
+    }
   }
 
   // ---- DISTRACTION CHECK ----
@@ -293,6 +406,7 @@
           message: result.message,
           showChillPrompt: !!result.showChillPrompt,
           showGoBack: !result.showChillPrompt,
+          site,
         });
       } else {
         fgRemoveOverlay();
@@ -312,5 +426,6 @@
     injectOverlay: fgInjectOverlay,
     removeOverlay: fgRemoveOverlay,
     checkAndBlock: fgCheckAndBlock,
+    UI: FGUI
   };
 })();

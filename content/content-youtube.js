@@ -157,19 +157,13 @@
   //  Uses Shadow DOM to prevent host-site CSS from interfering.
   // ============================================================
 
-  /**
-   * Injects the focus card immediately before anchorElement in the DOM.
-   * If the card already exists and the anchor hasn't changed, does nothing.
-   * If the anchor has changed (SPA navigation repositioned the layout),
-   * moves the existing card to the new position instead of recreating it.
-   *
-   * @param {Element|null} anchorElement - Element to insert the card before
-   */
+  // CSS variable token sets for the YouTube focus card.
+  // applyFocusCardTheme() only swaps variable values on the host element —
+  // the structural CSS never changes, avoiding a flash on theme switch.
   function injectFocusCard(anchorElement) {
     const existing = document.getElementById(FOCUS_CARD_ID);
 
     if (existing) {
-      // Card exists — reposition if anchor changed, otherwise leave it
       if (anchorElement && anchorElement.parentNode &&
           existing.nextSibling !== anchorElement) {
         anchorElement.parentNode.insertBefore(existing, anchorElement);
@@ -177,101 +171,87 @@
       return;
     }
 
-    // Build the card host
+    ThemeManager.init('youtube');
+
     const host = document.createElement('div');
     host.id = FOCUS_CARD_ID;
-    host.style.cssText = 'display:block;width:100%;';
+    host.style.cssText = 'display:block;width:100%; margin: 16px 0 24px;';
+    ThemeManager.applyTheme(host);
 
     const shadow = host.attachShadow({ mode: 'open' });
 
     const style = document.createElement('style');
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+      
+      :host {
+        ${ThemeManager.getCssVariableString('light')}
+      }
+      :host([data-theme="dark"]) {
+        ${ThemeManager.getCssVariableString('dark')}
+      }
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
-
-      .fg-focus-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 56px 32px;
-        margin: 16px 0 24px;
-        background: linear-gradient(135deg,
-          rgba(124, 58, 237, 0.07) 0%,
-          rgba(59, 130, 246, 0.05) 100%);
-        border: 1px solid rgba(124, 58, 237, 0.18);
-        border-radius: 20px;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        text-align: center;
-        animation: fgFadeIn 0.35s ease;
-      }
-
-      .fg-icon {
-        font-size: 44px;
-        margin-bottom: 16px;
-        filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
-      }
-
-      .fg-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #e2e8f0;
-        margin-bottom: 10px;
-        line-height: 1.3;
-      }
-
-      .fg-subtitle {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.5);
-        line-height: 1.65;
-        max-width: 440px;
-        margin-bottom: 0;
-      }
-
       @keyframes fgFadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to   { opacity: 1; transform: translateY(0); }
       }
+      @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
     `;
     shadow.appendChild(style);
 
-    const card = document.createElement('div');
-    card.className = 'fg-focus-card';
-    card.setAttribute('role', 'status');
-    card.setAttribute('aria-label', 'FocusGuard: Recommendations blocked');
+    // Create the card container using FGUI
+    const card = FG.UI.createCard();
+    
+    // Override max-width for inline placement
+    card.style.maxWidth = '100%';
+    card.style.width = '100%';
+    card.style.padding = '48px 32px';
 
-    const icon = document.createElement('span');
-    icon.className = 'fg-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '🛡️';
-
-    const title = document.createElement('h2');
-    title.className = 'fg-title';
-    title.textContent = 'Stay Focused';
+    card.appendChild(FG.UI.createLogo());
+    card.appendChild(FG.UI.createHeading('Stay Focused'));
 
     const subtitle = document.createElement('p');
-    subtitle.className = 'fg-subtitle';
     subtitle.textContent = 'Recommendations are blocked';
-
-    card.appendChild(icon);
-    card.appendChild(title);
+    subtitle.style.cssText = `
+      font-size: 15px;
+      color: var(--fg-text-secondary);
+      line-height: 1.6;
+      margin-top: var(--fg-spacing-sm);
+    `;
     card.appendChild(subtitle);
+
     shadow.appendChild(card);
 
-    // Insert immediately before the anchor element (sibling, not child)
     if (anchorElement && anchorElement.parentNode) {
       anchorElement.parentNode.insertBefore(host, anchorElement);
     } else {
-      // Fallback: prepend to ytd-browse page container, or body
       const browse = document.querySelector('ytd-browse') || document.body;
       browse.prepend(host);
     }
+
+    const onThemeChange = () => {
+      const existing = document.getElementById(FOCUS_CARD_ID);
+      if (existing) ThemeManager.applyTheme(existing);
+    };
+    ThemeManager.subscribe(onThemeChange);
+    host._fgThemeUnsubscribe = () => ThemeManager.unsubscribe(onThemeChange);
   }
 
   function removeFocusCard() {
     const existing = document.getElementById(FOCUS_CARD_ID);
-    if (existing) existing.remove();
+    if (existing) {
+      if (existing._fgThemeUnsubscribe) {
+        existing._fgThemeUnsubscribe();
+      }
+      existing.remove();
+    }
   }
 
   // ============================================================
