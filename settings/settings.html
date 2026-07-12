@@ -141,22 +141,24 @@
           </label>
         </div>
         <!-- Focus Reminder (visual element; new UI addition) -->
-        <div class="setting-row">
-          <div class="setting-label-group">
-            <span class="setting-label">Focus Reminder</span>
-            <span class="setting-sublabel">Get reminded at intervals</span>
+        <div id="focus-reminder-container">
+          <div class="setting-row">
+            <div class="setting-label-group">
+              <span class="setting-label">Focus Reminder</span>
+              <span class="setting-sublabel">Get reminded at intervals</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="focus-reminder" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="focus-reminder" />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="setting-row range-row">
-          <span class="setting-label">Reminder Interval</span>
-          <span class="range-value" id="reminder-interval-value">25 min</span>
-        </div>
-        <div class="slider-wrap">
-          <input type="range" id="reminder-interval" min="5" max="60" step="5" value="25" />
+          <div class="setting-row range-row" id="reminder-interval-row">
+            <span class="setting-label">Reminder Interval</span>
+            <span class="range-value" id="reminder-interval-value">25 min</span>
+          </div>
+          <div class="slider-wrap" id="reminder-interval-slider">
+            <input type="range" id="reminder-interval" min="5" max="60" step="5" value="25" />
+          </div>
         </div>
       </section>
 

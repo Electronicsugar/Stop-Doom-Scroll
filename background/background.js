@@ -267,6 +267,32 @@ async function inferGoalFromHistory() {
 }
 
 // ============================================================
+//  CHILL MODE STATE & ALARM MANAGEMENT
+// ============================================================
+
+async function activateChill() {
+  const settings = await getSettings();
+  await updateSession({
+    chillModeActive: true,
+    chillStartedAt: Date.now(),
+    chillReminderPending: false
+  });
+  api.alarms.clear('fg_chill_reminder');
+  if (settings.focusReminderEnabled) {
+    api.alarms.create('fg_chill_reminder', { delayInMinutes: settings.reminderInterval });
+  }
+}
+
+async function deactivateChill() {
+  await updateSession({
+    chillModeActive: false,
+    chillStartedAt: null,
+    chillReminderPending: false
+  });
+  api.alarms.clear('fg_chill_reminder');
+}
+
+// ============================================================
 //  REMINDER MESSAGE BUILDER
 // ============================================================
 
@@ -322,8 +348,26 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
     await updateSession({ breakModeActive: false, breakExpiresAt: null });
   }
 
-  // ---- Chill mode → allow everything ----
+  // ---- Chill mode active ----
   if (session.chillModeActive) {
+    if (settings.focusReminderEnabled) {
+      if (session.chillReminderPending) {
+        return { 
+          shouldBlock: true, 
+          reason: 'chill_reminder_prompt',
+          showChillReminderPrompt: true,
+          reminderInterval: settings.reminderInterval,
+          message: `You are using a blocked website for ${settings.reminderInterval} min. Do you still want to chill?`
+        };
+      }
+
+      // Start/reset timer if it wasn't running
+      if (!session.chillStartedAt) {
+        await updateSession({ chillStartedAt: Date.now() });
+        api.alarms.create('fg_chill_reminder', { delayInMinutes: settings.reminderInterval });
+      }
+    }
+
     return { shouldBlock: false, reason: 'chill_active' };
   }
 
@@ -403,22 +447,43 @@ async function checkDistraction(site, pageType, previousPageType, referrer) {
 // ============================================================
 
 api.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== 'fg_break_timer') return;
+  if (alarm.name === 'fg_break_timer') {
+    // Atomically clear break state and start a new focus session.
+    // focusStartedAt is set to NOW so the popup timer resets to 00:00:00.
+    await updateSession({
+      breakModeActive:    false,
+      breakExpiresAt:     null,
+      sessionState:       'FOCUSING',
+      focusStartedAt:     Date.now(),
+      accumulatedFocusMs: 0,
+    });
 
-  // Atomically clear break state and start a new focus session.
-  // focusStartedAt is set to NOW so the popup timer resets to 00:00:00.
-  await updateSession({
-    breakModeActive:    false,
-    breakExpiresAt:     null,
-    sessionState:       'FOCUSING',
-    focusStartedAt:     Date.now(),
-    accumulatedFocusMs: 0,
-  });
+    // Notify all relevant tabs that break ended
+    const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
+    for (const tab of tabs) {
+      safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
+    }
+  } else if (alarm.name === 'fg_chill_reminder') {
+    const session = await getSession();
+    if (!session.chillModeActive) return;
 
-  // Notify all relevant tabs that break ended
-  const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
-  for (const tab of tabs) {
-    safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
+    const settings = await getSettings();
+    if (!settings.focusReminderEnabled) return;
+
+    // Set pending so any future checks block them
+    await updateSession({ chillReminderPending: true });
+
+    // Show on the current active tab if it's a blocked site
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    if (tabs && tabs[0] && tabs[0].url) {
+      const url = tabs[0].url;
+      if (url.includes('youtube.com') || url.includes('instagram.com')) {
+        safeSendToTab(tabs[0].id, {
+          type: MSG.SHOW_CHILL_REMINDER,
+          reminderInterval: settings.reminderInterval
+        });
+      }
+    }
   }
 });
 
@@ -450,11 +515,13 @@ async function handleMessage(message) {
     case MSG.SET_GOAL: {
       const todo = await addTodo(message.goal, true);
       const wasChilling = (await getSession()).chillModeActive;
+      if (wasChilling) {
+        await deactivateChill();
+      }
       const session = await updateSession({
         sessionGoal: message.goal,
         goalPromptShown: true,
         goalSkipped: false,
-        chillModeActive: false,
       });
       // If chill mode was active, notify tabs to re-check blocking rules
       if (wasChilling) await notifyTabsToRecheck();
@@ -476,7 +543,7 @@ async function handleMessage(message) {
       // Adding a task signals work intent — deactivate auto-chill
       const curSession = await getSession();
       if (curSession.chillModeActive) {
-        await updateSession({ chillModeActive: false });
+        await deactivateChill();
         await notifyTabsToRecheck();
       }
       return { success: true, todo, todos };
@@ -620,7 +687,8 @@ async function handleMessage(message) {
 
     // ---- Chill mode ----
     case MSG.ENABLE_CHILL: {
-      const session = await updateSession({ chillModeActive: true });
+      await activateChill();
+      const session = await getSession();
 
       const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
       for (const tab of tabs) {
@@ -631,7 +699,9 @@ async function handleMessage(message) {
     }
 
     case MSG.DISABLE_CHILL: {
-      const session = await updateSession({ chillModeActive: false });
+      await deactivateChill();
+      const session = await getSession();
+      await notifyTabsToRecheck();
       return { success: true, session };
     }
 

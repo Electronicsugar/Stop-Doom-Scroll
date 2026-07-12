@@ -25,12 +25,33 @@ const showFocusSession = document.getElementById('show-focus-session');
 const showFocusStreak  = document.getElementById('show-focus-streak');
 const breakDurationRow = document.getElementById('break-duration-row');
 const breakDurationSlider = document.getElementById('break-duration-slider');
+const focusReminder    = document.getElementById('focus-reminder');
+const reminderInterval = document.getElementById('reminder-interval');
+const reminderIntervalValue = document.getElementById('reminder-interval-value');
+const focusReminderContainer = document.getElementById('focus-reminder-container');
+const reminderIntervalRow = document.getElementById('reminder-interval-row');
+const reminderIntervalSlider = document.getElementById('reminder-interval-slider');
 const saveIndicator  = document.getElementById('save-indicator');
 
 function toggleBreakSettingsVisibility() {
   const isEnabled = breakEnabled.checked;
   if (breakDurationRow) breakDurationRow.style.display = isEnabled ? '' : 'none';
   if (breakDurationSlider) breakDurationSlider.style.display = isEnabled ? '' : 'none';
+}
+
+function toggleReminderSettingsVisibility() {
+  const autoChillEnabled = autoChill.checked;
+  const reminderEnabled = focusReminder.checked;
+
+  if (focusReminderContainer) {
+    focusReminderContainer.style.display = autoChillEnabled ? '' : 'none';
+  }
+  if (reminderIntervalRow) {
+    reminderIntervalRow.style.display = (autoChillEnabled && reminderEnabled) ? '' : 'none';
+  }
+  if (reminderIntervalSlider) {
+    reminderIntervalSlider.style.display = (autoChillEnabled && reminderEnabled) ? '' : 'none';
+  }
 }
 
 /** Handle for the auto-hide timer so we can reset it on rapid changes */
@@ -48,6 +69,15 @@ function updateSliderFill() {
   const val = parseFloat(breakMax.value) || 10;
   const percentage = ((val - min) / (max - min)) * 100;
   breakMax.style.setProperty('--fill', `${percentage}%`);
+}
+
+function updateReminderSliderFill() {
+  if (!reminderInterval) return;
+  const min = parseFloat(reminderInterval.min) || 5;
+  const max = parseFloat(reminderInterval.max) || 60;
+  const val = parseFloat(reminderInterval.value) || 25;
+  const percentage = ((val - min) / (max - min)) * 100;
+  reminderInterval.style.setProperty('--fill', `${percentage}%`);
 }
 
 /**
@@ -74,11 +104,16 @@ async function loadSettings() {
     showTasks.checked     = s.showTasks             ?? DEFAULT_SETTINGS.showTasks;
     showFocusSession.checked = s.showFocusSession   ?? DEFAULT_SETTINGS.showFocusSession;
     showFocusStreak.checked  = s.showFocusStreak    ?? DEFAULT_SETTINGS.showFocusStreak;
+    focusReminder.checked = s.focusReminderEnabled  ?? DEFAULT_SETTINGS.focusReminderEnabled;
+    reminderInterval.value = s.reminderInterval     ?? DEFAULT_SETTINGS.reminderInterval;
 
     toggleBreakSettingsVisibility();
+    toggleReminderSettingsVisibility();
+    updateReminderSliderFill();
 
-    // Sync the displayed range label
+    // Sync the displayed range labels
     breakMaxValue.textContent = breakMax.value + ' min';
+    if (reminderIntervalValue) reminderIntervalValue.textContent = reminderInterval.value + ' min';
   } catch (err) {
     console.error('[FocusGuard Settings] Failed to load settings:', err);
   }
@@ -107,6 +142,8 @@ async function saveSettings() {
     showTasks:            showTasks.checked,
     showFocusSession:     showFocusSession.checked,
     showFocusStreak:      showFocusStreak.checked,
+    focusReminderEnabled: focusReminder.checked,
+    reminderInterval:     parseInt(reminderInterval.value, 10),
   };
 
   try {
@@ -117,6 +154,7 @@ async function saveSettings() {
   }
 
   toggleBreakSettingsVisibility();
+  toggleReminderSettingsVisibility();
 }
 
 // ── Save Indicator ──────────────────────────────────────────────────────────
@@ -134,7 +172,7 @@ function showSaveIndicator() {
 // ── Event Listeners ─────────────────────────────────────────────────────────
 
 // Auto-save whenever any toggle changes
-[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill, showMission, showTasks, showFocusSession, showFocusStreak].forEach(el => {
+[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill, showMission, showTasks, showFocusSession, showFocusStreak, focusReminder].forEach(el => {
   el.addEventListener('change', saveSettings);
 });
 
@@ -146,6 +184,14 @@ breakMax.addEventListener('input', () => {
 
 // Persist when the user releases the slider
 breakMax.addEventListener('change', saveSettings);
+
+if (reminderInterval) {
+  reminderInterval.addEventListener('input', () => {
+    if (reminderIntervalValue) reminderIntervalValue.textContent = reminderInterval.value + ' min';
+    updateReminderSliderFill();
+  });
+  reminderInterval.addEventListener('change', saveSettings);
+}
 
 // ── Initialise ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', loadSettings);

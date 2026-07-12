@@ -70,6 +70,13 @@
       // Re-check current page
       _urlChangeCallbacks.forEach(cb => cb(location.href));
     }
+    if (message.type === FG_MSG.SHOW_CHILL_REMINDER) {
+      fgInjectOverlay({
+        message: `You are using a blocked website for ${message.reminderInterval} min. Do you still want to chill?`,
+        showChillReminderPrompt: true,
+        reminderInterval: message.reminderInterval
+      });
+    }
   });
 
   // ============================================================
@@ -351,7 +358,27 @@
       flex-wrap: wrap;
     `;
 
-    if (config.showChillPrompt) {
+    if (config.showChillReminderPrompt) {
+      const chillBtn = FGUI.createButton('I want to chill', 'chill');
+      chillBtn.addEventListener('click', () => {
+        fgSendMessage({ type: FG_MSG.ENABLE_CHILL });
+        fgRemoveOverlay();
+      });
+      actions.appendChild(chillBtn);
+
+      const blockBtn = FGUI.createButton('No, block me', 'primary');
+      blockBtn.addEventListener('click', () => {
+        fgSendMessage({ type: FG_MSG.DISABLE_CHILL });
+        fgRemoveOverlay();
+        fgInjectOverlay({
+          message: "Good choice! Stay focused. You've got this.",
+          showChillPrompt: false,
+          showGoBack: true,
+          site: config.site,
+        });
+      });
+      actions.appendChild(blockBtn);
+    } else if (config.showChillPrompt) {
       const chillBtn = FGUI.createButton('I want to chill', 'chill');
       chillBtn.addEventListener('click', () => {
         fgSendMessage({ type: FG_MSG.ENABLE_CHILL });

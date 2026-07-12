@@ -36,6 +36,8 @@ const ringProgress    = $('ring-progress');
 const timerDisplay    = $('timer-display');
 const endBreakBtn     = $('end-break-btn');
 
+const popupHeader     = $('popup-header');
+const hdrDivider      = $('hdr-divider');
 const popupFooter     = $('popup-footer');
 const breakBtn        = $('break-btn');
 const settingsBtn     = $('settings-btn');
@@ -578,10 +580,14 @@ function showSection(name) {
   Object.values(SECTIONS).forEach((el) => el.classList.remove('active'));
   if (SECTIONS[name]) SECTIONS[name].classList.add('active');
 
-  // Footer is visible only in the main view
+  // Header and footer are visible only in the main view
   if (name === 'main') {
+    popupHeader.classList.remove('hidden');
+    hdrDivider.classList.remove('hidden');
     popupFooter.classList.remove('hidden');
   } else {
+    popupHeader.classList.add('hidden');
+    hdrDivider.classList.add('hidden');
     popupFooter.classList.add('hidden');
   }
 }
