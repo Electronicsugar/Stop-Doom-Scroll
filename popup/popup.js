@@ -9,6 +9,7 @@
 
 import { MSG, CAPTCHA_CONFIG } from '../lib/constants.js';
 
+
 // Cross-browser API handle (Firefox = browser, Chrome = chrome)
 const api = (typeof browser !== 'undefined') ? browser : chrome;
 
@@ -62,6 +63,7 @@ let currentState = {
   todos:    [],
   settings: null,
   streak:   null,
+  analytics: [],   // [{ hostname, seconds, visits, lastVisited }] for today
 };
 let captchaText    = '';
 let breakInterval  = null;
@@ -87,6 +89,8 @@ async function init() {
   render();
   setupEventListeners();
   startFocusTimer();
+  // Load analytics after initial render (non-blocking)
+  loadAnalytics();
 }
 
 // ────────────────────────────────────────────
@@ -163,16 +167,10 @@ function renderStreak() {
 
   const streakToday = $('streak-today');
   const streakDistractions = $('streak-distractions');
-  const streakLongest = $('streak-longest');
   const streakCurrentVal = $('streak-current-val');
 
   if (streakToday) streakToday.textContent = Math.round((streak.todayFocusMs || 0) / 60000) + 'm';
-  
-  if (streakDistractions) {
-    streakDistractions.textContent = streak.distractionsBlocked || 0;
-  }
-
-  if (streakLongest) streakLongest.textContent = Math.round((streak.longestSessionMs || 0) / 60000) + 'm';
+  if (streakDistractions) streakDistractions.textContent = streak.distractionsBlocked || 0;
   if (streakCurrentVal) streakCurrentVal.textContent = (streak.currentStreak || 0) + ' days';
 }
 
@@ -590,6 +588,113 @@ function showSection(name) {
     hdrDivider.classList.add('hidden');
     popupFooter.classList.add('hidden');
   }
+}
+
+// ────────────────────────────────────────────
+// ANALYTICS
+// ────────────────────────────────────────────
+
+/**
+ * Formats a duration in seconds into a human-readable string.
+ * Examples: 7542s → "2h 5m", 3660s → "1h 1m", 90s → "1m", 42s → "42s"
+ */
+function formatDuration(seconds) {
+  if (seconds < 60) return seconds + 's';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return h + 'h' + (m > 0 ? ' ' + m + 'm' : '');
+  return m + 'm';
+}
+
+/**
+ * Fetches today's analytics from the background and renders the analytics card.
+ * Non-blocking — called after the main render completes.
+ */
+async function loadAnalytics() {
+  try {
+    const res = await sendMessage({ type: MSG.GET_ANALYTICS });
+    if (res && res.success && Array.isArray(res.data)) {
+      currentState.analytics = res.data;
+      renderAnalytics(res.data);
+    }
+  } catch (err) {
+    // Analytics failure is non-critical — leave the empty state
+  }
+}
+
+/**
+ * Renders the analytics card with today's top sites.
+ * Accepts an array of { hostname, seconds, visits, lastVisited } objects,
+ * pre-sorted by seconds descending.
+ * Shows at most 5 rows in the UI (storage retains everything).
+ */
+function renderAnalytics(data) {
+  const listEl = $('analytics-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'analytics-empty';
+    empty.textContent = 'No browsing data yet.';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  // Show top 5 (storage holds all; UI is intentionally compact)
+  const top = data.slice(0, 5);
+
+  top.forEach((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'analytics-row';
+    // Staggered fade-in: each row animates ~150ms after the previous
+    row.style.animationDelay = (index * 60) + 'ms';
+
+    // Favicon — Google favicon service with fallback globe icon
+    const favicon = document.createElement('img');
+    favicon.className = 'analytics-favicon';
+    favicon.width = 16;
+    favicon.height = 16;
+    favicon.alt = '';
+    favicon.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(entry.hostname)}`;
+    favicon.onerror = function () {
+      // Fallback: replace with an inline globe SVG
+      this.replaceWith(createGlobeIcon());
+    };
+
+    // Site name (capitalize first letter for readability)
+    const name = document.createElement('span');
+    name.className = 'analytics-site';
+    // Show hostname but strip the TLD for short names
+    const shortName = entry.hostname.split('.')[0];
+    name.textContent = shortName.charAt(0).toUpperCase() + shortName.slice(1);
+    name.title = entry.hostname;
+
+    // Duration
+    const dur = document.createElement('span');
+    dur.className = 'analytics-duration';
+    dur.textContent = formatDuration(entry.seconds);
+
+    row.appendChild(favicon);
+    row.appendChild(name);
+    row.appendChild(dur);
+    listEl.appendChild(row);
+  });
+}
+
+/** Creates a small SVG globe icon for favicon fallback. */
+function createGlobeIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('class', 'analytics-favicon analytics-favicon--fallback');
+  svg.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>';
+  return svg;
 }
 
 // ────────────────────────────────────────────

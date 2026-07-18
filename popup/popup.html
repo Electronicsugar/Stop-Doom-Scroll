@@ -63,12 +63,6 @@
       <section class="card-section mission-section" id="mission-section">
         <div class="section-label">TODAY'S MISSION</div>
         <div class="mission-goal" id="mission-goal">Add your goal above</div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="progress-bar-fill" style="width:0%"></div>
-          </div>
-          <span class="progress-pct" id="progress-pct">0%</span>
-        </div>
         <div class="estimated-time" id="estimated-time">Estimated time: —</div>
       </section>
 
@@ -174,12 +168,15 @@
             <span class="streak-value" id="streak-distractions">0</span>
           </div>
           <div class="streak-item">
-            <span class="streak-label">Longest Session</span>
-            <span class="streak-value" id="streak-longest">—</span>
-          </div>
-          <div class="streak-item">
             <span class="streak-label">Current Streak</span>
             <span class="streak-value" id="streak-current-val">0 days</span>
+          </div>
+          <!-- Analytics card: full-width, replaces Longest Session -->
+          <div class="streak-item streak-item--analytics" id="analytics-item">
+            <span class="streak-label">ANALYTICS</span>
+            <div class="analytics-list" id="analytics-list">
+              <span class="analytics-empty">No browsing data yet.</span>
+            </div>
           </div>
         </div>
       </section>

@@ -42,14 +42,15 @@
             </span>
             <span class="platform-name">YOUTUBE</span>
           </div>
-          <div class="setting-row">
+          <!-- data-lock-protected marks toggles that require authentication when lock is on -->
+          <div class="setting-row" data-lock-protected>
             <span class="setting-label">Block Home Feed</span>
             <label class="toggle">
               <input type="checkbox" id="yt-block-feed" />
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div class="setting-row">
+          <div class="setting-row" data-lock-protected>
             <span class="setting-label">Block Shorts</span>
             <label class="toggle">
               <input type="checkbox" id="yt-block-shorts" />
@@ -82,14 +83,14 @@
             </span>
             <span class="platform-name">INSTAGRAM</span>
           </div>
-          <div class="setting-row">
+          <div class="setting-row" data-lock-protected>
             <span class="setting-label">Block Home Feed</span>
             <label class="toggle">
               <input type="checkbox" id="ig-block-feed" />
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div class="setting-row">
+          <div class="setting-row" data-lock-protected>
             <span class="setting-label">Block Reels</span>
             <label class="toggle">
               <input type="checkbox" id="ig-block-reels" />
@@ -219,6 +220,27 @@
         </div>
       </section>
 
+      <!-- ── SECURITY ── -->
+      <div class="settings-section-label">SECURITY</div>
+
+      <section class="settings-section" id="lock-section">
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <span class="setting-label">🔒 Lock Settings</span>
+            <span class="setting-sublabel">Prevent impulsive changes</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="lock-enabled" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <!-- Manage row: shown when lock is enabled -->
+        <div id="lock-manage-row" class="setting-row lock-manage-row" style="display:none">
+          <span class="setting-label lock-status-text" id="lock-status-text">Enabled</span>
+          <button class="lock-manage-btn" id="lock-manage-btn">Manage…</button>
+        </div>
+      </section>
+
 
       <!-- ── TIP OF THE DAY ── -->
       <div class="tip-card">
@@ -252,7 +274,7 @@
     </main>
 
     <footer class="settings-footer">
-      <p>Sage v1.0.0 — Your focus, your rules.</p>
+      <p>Sage v1.1.0 — Your focus, your rules.</p>
       <a href="https://github.com/Electronicsugar/Stop-Doom-Scroll" target="_blank" rel="noopener noreferrer" class="github-link" title="GitHub Repository">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -261,10 +283,189 @@
     </footer>
   </div>
 
+  <!-- ====================================================
+       SETTINGS LOCK — DIALOGS
+       All dialogs are hidden by default and shown via JS.
+       Only one dialog is ever visible at a time.
+       ==================================================== -->
+
+  <!-- ── LOCK SETUP DIALOG (shown when user enables lock for first time) ── -->
+  <div id="lock-setup-overlay" class="lock-overlay" role="dialog" aria-modal="true" aria-labelledby="lock-setup-title" style="display:none">
+    <div class="lock-dialog">
+      <!-- Step 1: Explanation -->
+      <div id="lock-setup-step1">
+        <div class="lock-dialog-icon" aria-hidden="true">🔒</div>
+        <h2 class="lock-dialog-title" id="lock-setup-title">Lock Settings</h2>
+        <p class="lock-dialog-desc">
+          For the best results, ask a trusted friend or family member to create this password and keep it private.
+          The goal is to make disabling focus protections a deliberate decision rather than an impulsive one.
+        </p>
+        <div class="lock-dialog-actions">
+          <button class="lock-btn lock-btn-primary" id="lock-setup-continue-btn">Continue</button>
+          <button class="lock-btn lock-btn-ghost" id="lock-setup-cancel-btn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Password entry -->
+      <div id="lock-setup-step2" style="display:none">
+        <div class="lock-dialog-icon" aria-hidden="true">🔑</div>
+        <h2 class="lock-dialog-title">Create Password</h2>
+        <p class="lock-dialog-desc">Choose a strong password. Only the person who knows it can change protected settings.</p>
+
+        <div class="lock-input-wrap">
+          <input type="password" id="lock-setup-password" class="lock-input" placeholder="Password" autocomplete="new-password" />
+          <button type="button" class="lock-eye-btn" id="lock-setup-eye1" aria-label="Show password" tabindex="-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div id="setup-pw-requirements" class="password-requirements" aria-live="polite" style="display:none">
+          <ul class="pw-rules-list"></ul>
+          <div class="pw-strength-container">
+            <div class="pw-strength-meter">
+              <div class="pw-strength-segment"></div>
+              <div class="pw-strength-segment"></div>
+              <div class="pw-strength-segment"></div>
+              <div class="pw-strength-segment"></div>
+            </div>
+            <span class="pw-strength-label"></span>
+          </div>
+        </div>
+        <div class="lock-input-wrap">
+          <input type="password" id="lock-setup-confirm" class="lock-input" placeholder="Confirm Password" autocomplete="new-password" />
+          <button type="button" class="lock-eye-btn" id="lock-setup-eye2" aria-label="Show confirm password" tabindex="-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="lock-error" id="lock-setup-error" style="display:none"></p>
+        <div class="lock-dialog-actions">
+          <button class="lock-btn lock-btn-primary" id="lock-setup-enable-btn">Enable Lock</button>
+          <button class="lock-btn lock-btn-ghost" id="lock-setup-back-btn">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── UNLOCK DIALOG (shown when user tries to change a protected setting) ── -->
+  <div id="lock-unlock-overlay" class="lock-overlay" role="dialog" aria-modal="true" aria-labelledby="lock-unlock-title" style="display:none">
+    <div class="lock-dialog">
+      <div class="lock-dialog-icon" aria-hidden="true">🔒</div>
+      <h2 class="lock-dialog-title" id="lock-unlock-title">Settings are locked.</h2>
+      <p class="lock-dialog-desc">Ask the person who configured Sage to enter the password.</p>
+      <div class="lock-input-wrap">
+        <input type="password" id="lock-unlock-password" class="lock-input" placeholder="Password" autocomplete="current-password" />
+        <button type="button" class="lock-eye-btn" id="lock-unlock-eye" aria-label="Show password" tabindex="-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <p class="lock-error" id="lock-unlock-error" style="display:none"></p>
+      <p class="lock-cooldown" id="lock-cooldown-msg" style="display:none"></p>
+      <div class="lock-dialog-actions">
+        <button class="lock-btn lock-btn-ghost" id="lock-unlock-cancel-btn">Cancel</button>
+        <button class="lock-btn lock-btn-primary" id="lock-unlock-confirm-btn">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── UNLOCK DELAY COUNTDOWN OVERLAY ── -->
+  <div id="lock-delay-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
+    <div class="lock-dialog lock-dialog--narrow">
+      <div class="lock-dialog-icon" aria-hidden="true">⏳</div>
+      <h2 class="lock-dialog-title">Unlock requested.</h2>
+      <p class="lock-dialog-desc">Please wait <span id="lock-delay-countdown" class="lock-countdown-value">60</span> seconds…</p>
+      <div class="lock-dialog-actions">
+        <button class="lock-btn lock-btn-ghost" id="lock-delay-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MANAGE LOCK DIALOG (password change, delay, disable) ── -->
+  <div id="lock-manage-overlay" class="lock-overlay" role="dialog" aria-modal="true" aria-labelledby="lock-manage-title" style="display:none">
+    <div class="lock-dialog">
+      <h2 class="lock-dialog-title" id="lock-manage-title">Settings Lock</h2>
+
+      <!-- Current password for any action in this dialog -->
+      <div class="lock-manage-section">
+        <label class="lock-field-label">Password</label>
+        <div class="lock-input-wrap">
+          <input type="password" id="lock-manage-password" class="lock-input" placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="lock-eye-btn" id="lock-manage-eye" aria-label="Show password" tabindex="-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="lock-error" id="lock-manage-error" style="display:none"></p>
+      </div>
+
+      <!-- Unlock delay selector -->
+      <div class="lock-manage-section">
+        <label class="lock-field-label">Unlock Delay</label>
+        <div class="lock-radio-group">
+          <label class="lock-radio"><input type="radio" name="unlock-delay" value="0" id="delay-off" /> Off</label>
+          <label class="lock-radio"><input type="radio" name="unlock-delay" value="30" id="delay-30s" /> 30 seconds</label>
+          <label class="lock-radio"><input type="radio" name="unlock-delay" value="60" id="delay-60s" /> 60 seconds</label>
+          <label class="lock-radio"><input type="radio" name="unlock-delay" value="300" id="delay-5m" /> 5 minutes</label>
+        </div>
+      </div>
+
+      <div class="lock-dialog-actions lock-manage-actions">
+        <button class="lock-btn lock-btn-ghost lock-btn-full" id="lock-change-pw-btn">Change Password</button>
+        <button class="lock-btn lock-btn-danger lock-btn-full" id="lock-disable-btn">Disable Lock</button>
+      </div>
+
+      <div class="lock-dialog-actions" style="margin-top:8px">
+        <button class="lock-btn lock-btn-primary" id="lock-manage-save-btn">Save</button>
+        <button class="lock-btn lock-btn-ghost" id="lock-manage-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHANGE PASSWORD DIALOG ── -->
+  <div id="lock-change-pw-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
+    <div class="lock-dialog">
+      <div class="lock-dialog-icon" aria-hidden="true">🔑</div>
+      <h2 class="lock-dialog-title">Change Password</h2>
+
+      <div class="lock-input-wrap">
+        <input type="password" id="lock-change-current" class="lock-input" placeholder="Current Password" autocomplete="current-password" />
+        <button type="button" class="lock-eye-btn" id="lock-change-eye1" aria-label="Show current password" tabindex="-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="lock-input-wrap">
+        <input type="password" id="lock-change-new" class="lock-input" placeholder="New Password" autocomplete="new-password" />
+        <button type="button" class="lock-eye-btn" id="lock-change-eye2" aria-label="Show new password" tabindex="-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div id="change-pw-requirements" class="password-requirements" aria-live="polite" style="display:none">
+        <ul class="pw-rules-list"></ul>
+        <div class="pw-strength-container">
+          <div class="pw-strength-meter">
+            <div class="pw-strength-segment"></div>
+            <div class="pw-strength-segment"></div>
+            <div class="pw-strength-segment"></div>
+            <div class="pw-strength-segment"></div>
+          </div>
+          <span class="pw-strength-label"></span>
+        </div>
+      </div>
+      <div class="lock-input-wrap">
+        <input type="password" id="lock-change-confirm" class="lock-input" placeholder="Confirm New Password" autocomplete="new-password" />
+        <button type="button" class="lock-eye-btn" id="lock-change-eye3" aria-label="Show confirm password" tabindex="-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+
+      <p class="lock-error" id="lock-change-error" style="display:none"></p>
+      <div class="lock-dialog-actions">
+        <button class="lock-btn lock-btn-ghost" id="lock-change-cancel-btn">Cancel</button>
+        <button class="lock-btn lock-btn-primary" id="lock-change-confirm-btn">Change Password</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Visual UI init — external file for MV3 CSP compliance -->
   <script src="settings-ui.js"></script>
 
   <script type="module" src="settings.js"></script>
 </body>
 </html>
-

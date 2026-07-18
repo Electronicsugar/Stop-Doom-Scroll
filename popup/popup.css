@@ -36,9 +36,6 @@
   --sticky-pin:    #9a9080;
   --sticky-line:   rgba(90, 75, 55, 0.22);
 
-  /* Progress */
-  --progress-track: var(--fg-accent-light);
-
   /* Buttons */
   --btn-ink:       var(--fg-bg-primary);
   --btn-dark-bg:   var(--fg-text-primary);
@@ -325,37 +322,12 @@ input  { font-family: inherit; }
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
-  margin-bottom: 9px;
+  /* No bottom margin — progress bar is gone; estimated-time follows directly */
+  margin-bottom: 4px;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.progress-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-.progress-bar-track {
-  flex: 1;
-  height: 4px;
-  background: var(--progress-track);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
-  transition: width 0.5s var(--ease);
-}
-.progress-pct {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-secondary);
-  min-width: 28px;
-  text-align: right;
 }
 .estimated-time {
   font-size: 11px;
@@ -586,10 +558,14 @@ input  { font-family: inherit; }
 .focus-controls {
   margin-bottom: 0;
 }
+/* Layout-driven row: sized by its fixed-dimension children, never by content.
+   No hardcoded min-width — if button sizes change via design tokens, this
+   adapts automatically. */
 .focus-ctrl-row {
-  display: flex;
+  display: inline-flex;
   gap: 7px;
   margin-bottom: 0;
+  flex-shrink: 0;   /* prevent parent flex from squishing the row */
 }
 
 /* Play/Pause Swap Transition */
@@ -622,7 +598,13 @@ input  { font-family: inherit; }
   transform: scale(1) rotate(0deg);
 }
 
-/* Shared button system (fg-btn) */
+/* ── fg-btn base ────────────────────────────────────────────────────────────
+   A permanent 1px transparent border is reserved on ALL buttons so that
+   variant classes (e.g. fg-btn-ghost) can show a colored border without
+   ever changing the border-width. This eliminates the 1px layout shift that
+   was causing the play/pause controls to jitter.
+   box-sizing: border-box ensures the border never increases rendered size.
+──────────────────────────────────────────────────────────────────────────── */
 .fg-btn {
   display: inline-flex;
   align-items: center;
@@ -631,9 +613,12 @@ input  { font-family: inherit; }
   font-family: var(--font-body);
   font-weight: 500;
   cursor: pointer;
-  border: none;
+  /* Permanent transparent border — width never changes across states */
+  border: 1px solid transparent;
+  box-sizing: border-box;
   transition: background var(--speed-fast) var(--ease),
               color var(--speed-fast) var(--ease),
+              border-color var(--speed-fast) var(--ease),
               transform var(--speed-fast) var(--ease),
               box-shadow var(--speed-fast) var(--ease);
   white-space: nowrap;
@@ -647,9 +632,17 @@ input  { font-family: inherit; }
 .fg-btn-xs  { font-size: 11px; padding: 4px 9px; height: 24px; }
 .fg-btn-md  { font-size: 12.5px; padding: 8px 16px; height: 34px; }
 .fg-btn-lg  { font-size: 13px; padding: 10px 20px; height: 38px; }
-.fg-icon-only { width: 32px; height: 32px; padding: 0; justify-content: center; flex-shrink: 0; }
+/* Fixed size icon-only button — flex:0 0 auto prevents any flex recalculation */
+.fg-icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  flex: 0 0 auto;           /* never grow or shrink */
+  box-sizing: border-box;
+}
 
-/* Variants */
+/* Variant classes only override border-color, never border-width */
 .fg-btn-primary {
   background: var(--btn-dark-bg);
   color: var(--btn-ink);
@@ -659,7 +652,7 @@ input  { font-family: inherit; }
 .fg-btn-ghost {
   background: var(--btn-ghost-bg);
   color: var(--ink-secondary);
-  border: 1px solid var(--btn-ghost-border);
+  border-color: var(--btn-ghost-border); /* only border-color changes */
 }
 .fg-btn-ghost:hover { background: var(--btn-ghost-hover); color: var(--ink); }
 
@@ -672,14 +665,14 @@ input  { font-family: inherit; }
 .fg-btn-danger {
   background: var(--btn-danger-bg);
   color: var(--btn-danger-text);
-  border: 1px solid var(--btn-danger-border);
+  border-color: var(--btn-danger-border);
 }
 .fg-btn-danger:hover { background: var(--btn-danger-hover); }
 
 .fg-btn-outline-danger {
   background: transparent;
   color: var(--btn-danger-text);
-  border: 1px solid var(--btn-danger-border);
+  border-color: var(--btn-danger-border);
 }
 .fg-btn-outline-danger:hover { background: var(--btn-danger-hover); }
 
@@ -743,12 +736,80 @@ input  { font-family: inherit; }
   letter-spacing: 0.08em;
   color: var(--ink-muted);
   text-transform: uppercase;
+  margin-bottom: 2px;
 }
 .streak-value {
   font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+
+/* Analytics card — spans full grid width */
+.streak-item--analytics {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+}
+
+/* Analytics list container */
+.analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+/* Single analytics row: favicon + site name + duration */
+.analytics-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: analyticsRowFadeIn 200ms var(--ease) forwards;
+}
+
+@keyframes analyticsRowFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.analytics-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+/* Fallback globe icon inherits muted color */
+.analytics-favicon--fallback {
+  color: var(--ink-muted);
+  stroke-width: 1.5;
+}
+
+.analytics-site {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.analytics-duration {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.analytics-empty {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-style: italic;
 }
 
 /* ====== BREAK CTA / FOOTER ====== */

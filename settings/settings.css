@@ -653,3 +653,381 @@ input[type="range"]:focus-visible {
     transition: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SECURITY SECTION — Lock manage row
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.lock-manage-row {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.lock-status-text {
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+.lock-manage-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  transition: background var(--speed-fast) var(--ease), color var(--speed-fast) var(--ease);
+}
+.lock-manage-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+/* Lock-protected rows: subtle indicator when locked */
+[data-lock-protected][data-locked] .toggle-slider {
+  opacity: 0.7;
+}
+[data-lock-protected][data-locked]::after {
+  content: '🔒';
+  font-size: 10px;
+  margin-left: 6px;
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOCK DIALOGS — Overlay, Dialog Card, Inputs, Buttons
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Full-page backdrop */
+.lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lockOverlayIn 200ms var(--ease) both;
+  backdrop-filter: blur(2px);
+}
+
+@keyframes lockOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Dialog card */
+.lock-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--divider);
+  border-radius: 18px;
+  padding: 28px 24px 24px;
+  width: calc(100% - 48px);
+  max-width: 300px;
+  box-shadow: var(--card-shadow);
+  animation: lockDialogIn 220ms var(--ease) both;
+  font-family: var(--font-body);
+}
+
+.lock-dialog--narrow {
+  max-width: 260px;
+}
+
+@keyframes lockDialogIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Dialog header elements */
+.lock-dialog-icon {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.lock-dialog-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.lock-dialog-desc {
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Password input row with eye toggle */
+.lock-input-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.lock-input {
+  width: 100%;
+  height: 38px;
+  background: var(--bg-surface);
+  border: 1px solid var(--divider);
+  border-radius: 9px;
+  padding: 0 36px 0 12px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--speed-fast) var(--ease),
+              box-shadow var(--speed-fast) var(--ease);
+  box-sizing: border-box;
+}
+
+.lock-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.lock-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Password visibility toggle button */
+.lock-eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color var(--speed-fast) var(--ease);
+}
+.lock-eye-btn:hover { color: var(--ink); }
+
+/* Error message */
+.lock-error {
+  font-size: 12px;
+  color: var(--accent, #b83c2e);
+  color: var(--fg-danger, #b83c2e);
+  text-align: center;
+  margin: 6px 0 10px;
+  line-height: 1.4;
+}
+
+/* Lockout countdown */
+.lock-cooldown {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  text-align: center;
+  margin: 4px 0 10px;
+  line-height: 1.4;
+}
+
+/* Countdown value highlight */
+.lock-countdown-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Dialog action buttons row */
+.lock-dialog-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.lock-btn {
+  flex: 1;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  transition: background var(--speed-fast) var(--ease),
+              color var(--speed-fast) var(--ease),
+              border-color var(--speed-fast) var(--ease),
+              transform var(--speed-fast) var(--ease);
+  outline: none;
+}
+.lock-btn:active { transform: scale(0.97); }
+.lock-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.lock-btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: transparent;
+}
+.lock-btn-primary:hover { opacity: 0.88; }
+
+.lock-btn-ghost {
+  background: transparent;
+  color: var(--ink-secondary);
+  border-color: var(--divider);
+}
+.lock-btn-ghost:hover { background: var(--bg-surface); color: var(--ink); }
+
+.lock-btn-danger {
+  background: rgba(192, 57, 43, 0.08);
+  color: #b83c2e;
+  border-color: rgba(192, 57, 43, 0.22);
+}
+.lock-btn-danger:hover { background: rgba(192, 57, 43, 0.14); }
+
+.lock-btn-full { width: 100%; flex: none; }
+
+/* Manage dialog sections */
+.lock-manage-section {
+  margin-bottom: 18px;
+}
+
+.lock-field-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
+/* Radio group for unlock delay */
+.lock-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lock-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.lock-radio input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.lock-manage-actions {
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0;
+}
+
+/* Dark theme adjustments (vars already cover most) */
+[data-theme="dark"] .lock-btn-danger {
+  color: #e87a70;
+  border-color: rgba(232, 122, 112, 0.25);
+  background: rgba(192, 57, 43, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PASSWORD VALIDATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.password-requirements {
+  margin-top: -4px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border-radius: 9px;
+  border: 1px solid var(--divider);
+}
+
+.pw-rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pw-rules-list li {
+  font-size: 11.5px;
+  color: var(--ink-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 150ms var(--ease);
+}
+
+.pw-rules-list li.passed {
+  color: var(--accent);
+}
+
+.pw-rules-list li::before {
+  content: '○';
+  font-size: 11px;
+}
+
+.pw-rules-list li.passed::before {
+  content: '✓';
+  font-weight: bold;
+}
+
+.pw-strength-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pw-strength-meter {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.pw-strength-segment {
+  height: 4px;
+  flex: 1;
+  background: var(--divider);
+  border-radius: 2px;
+  transition: background 150ms var(--ease);
+}
+
+.pw-strength-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  width: 52px;
+  text-align: right;
+  transition: color 150ms var(--ease);
+}
+
+/* Strength specific colors */
+.pw-strength-container[data-strength="weak"] .pw-strength-segment:nth-child(1) { background: #e74c3c; }
+.pw-strength-container[data-strength="weak"] .pw-strength-label { color: #e74c3c; }
+
+.pw-strength-container[data-strength="fair"] .pw-strength-segment:nth-child(1),
+.pw-strength-container[data-strength="fair"] .pw-strength-segment:nth-child(2) { background: #f39c12; }
+.pw-strength-container[data-strength="fair"] .pw-strength-label { color: #f39c12; }
+
+.pw-strength-container[data-strength="good"] .pw-strength-segment:nth-child(1),
+.pw-strength-container[data-strength="good"] .pw-strength-segment:nth-child(2),
+.pw-strength-container[data-strength="good"] .pw-strength-segment:nth-child(3) { background: #f1c40f; }
+.pw-strength-container[data-strength="good"] .pw-strength-label { color: #f1c40f; }
+
+.pw-strength-container[data-strength="strong"] .pw-strength-segment { background: var(--accent); }
+.pw-strength-container[data-strength="strong"] .pw-strength-label { color: var(--accent); }

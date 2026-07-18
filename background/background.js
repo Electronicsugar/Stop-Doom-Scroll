@@ -7,11 +7,14 @@
  * - Goal inference from recent browsing activity
  * - Break timer management via chrome.alarms
  * - SPA navigation detection via webNavigation API
+ * - Website usage analytics (event-driven, no polling)
+ * - Settings lock: PBKDF2 password hashing and verification
  */
 
 import {
   MSG, STORAGE_KEYS, SITE, PAGE_TYPE,
   INFERENCE_KEYWORDS, SEARCH_QUERY_PARAMS, REMINDERS, DEFAULT_SETTINGS,
+  LOCK_MAX_ATTEMPTS, LOCK_COOLDOWN_MS, LOCK_AUTH_TIMEOUT_MS,
 } from '../lib/constants.js';
 
 import {
@@ -20,7 +23,14 @@ import {
   getTodos, addTodo, toggleTodo, deleteTodo, clearCompletedTodos,
   getSettings, updateSettings,
   getRecentUrls, addRecentUrl, clearRecentUrls,
+  getLockConfig, setLockConfig, updateLockConfig,
 } from '../lib/storage.js';
+
+import { validatePassword } from '../lib/password.js';
+
+import {
+  startTracking, stopTracking, flush, getAnalytics,
+} from '../lib/analytics.js';
 
 const api = (typeof browser !== 'undefined') ? browser : chrome;
 
@@ -119,6 +129,77 @@ async function notifyTabsToRecheck() {
     safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
   }
 }
+
+// ============================================================
+//  ANALYTICS TRACKING (event-driven — no polling)
+// ============================================================
+
+// Whether the browser window is currently focused
+let windowFocused = true;
+
+/**
+ * Called when the active tab or window changes.
+ * Looks up the new active tab and starts tracking it.
+ *
+ * @param {number} windowId  the currently focused window (or WINDOW_ID_NONE)
+ * @param {boolean} isNewVisit  whether to count this as a new visit
+ */
+async function handleActiveTabChange(windowId, isNewVisit = false) {
+  if (!windowFocused || windowId === (api.windows && api.windows.WINDOW_ID_NONE || -1)) {
+    await stopTracking();
+    return;
+  }
+  try {
+    const tabs = await api.tabs.query({ active: true, windowId });
+    if (tabs && tabs.length > 0 && tabs[0].url) {
+      await startTracking(tabs[0].id, tabs[0].url, windowId, isNewVisit);
+    } else {
+      await stopTracking();
+    }
+  } catch {
+    await stopTracking();
+  }
+}
+
+// Tab switches within the same window
+api.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await api.tabs.get(activeInfo.tabId);
+    await startTracking(activeInfo.tabId, tab?.url || '', activeInfo.windowId, true);
+  } catch {
+    await stopTracking();
+  }
+});
+
+// URL changes within a tab (navigation, SPA route changes)
+api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!tab.active) return;                   // only care about the active tab
+  if (changeInfo.status !== 'complete') return; // wait for full load
+  if (!tab.url) return;
+  await startTracking(tabId, tab.url, tab.windowId, true);
+});
+
+// Browser window focus changes
+if (api.windows && api.windows.onFocusChanged) {
+  api.windows.onFocusChanged.addListener(async (windowId) => {
+    const NONE = api.windows.WINDOW_ID_NONE;
+    if (windowId === NONE) {
+      // Browser lost focus (minimized, another app, etc.)
+      windowFocused = false;
+      await stopTracking();
+    } else {
+      // Browser regained focus
+      windowFocused = true;
+      await handleActiveTabChange(windowId, false);
+    }
+  });
+}
+
+// Service worker suspension: flush any pending time before the SW sleeps.
+// chrome.runtime.onSuspend fires just before the service worker is terminated.
+api.runtime.onSuspend.addListener(async () => {
+  await flush(false);
+});
 
 // ============================================================
 //  GOAL INFERENCE ENGINE
@@ -488,6 +569,125 @@ api.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // ============================================================
+//  SETTINGS LOCK — CRYPTO HELPERS
+// ============================================================
+
+/**
+ * Converts a hex string to a Uint8Array.
+ * @param {string} hex
+ * @returns {Uint8Array}
+ */
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+/**
+ * Converts a Uint8Array to a hex string.
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Hashes a password using PBKDF2-SHA256 with 100,000 iterations.
+ * Returns { hash: hex, salt: hex }.
+ * Uses a random 16-byte salt if none is provided.
+ *
+ * @param {string} password
+ * @param {string} [existingSaltHex]  optional existing salt (for verification)
+ * @returns {Promise<{ hash: string, salt: string }>}
+ */
+async function hashPassword(password, existingSaltHex) {
+  const enc = new TextEncoder();
+  const saltBytes = existingSaltHex
+    ? hexToBytes(existingSaltHex)
+    : crypto.getRandomValues(new Uint8Array(16));
+
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    256 // 32 bytes
+  );
+
+  return {
+    hash: bytesToHex(new Uint8Array(derivedBits)),
+    salt: bytesToHex(saltBytes),
+  };
+}
+
+/**
+ * Verifies a plaintext password against a stored hash and salt.
+ * Uses constant-time comparison to resist timing attacks.
+ *
+ * @param {string} password
+ * @param {string} storedHash  hex
+ * @param {string} storedSalt  hex
+ * @returns {Promise<boolean>}
+ */
+async function verifyPassword(password, storedHash, storedSalt) {
+  try {
+    const { hash } = await hashPassword(password, storedSalt);
+    // Constant-time comparison: compare every byte even if one differs early
+    if (hash.length !== storedHash.length) return false;
+    let diff = 0;
+    for (let i = 0; i < hash.length; i++) {
+      diff |= hash.charCodeAt(i) ^ storedHash.charCodeAt(i);
+    }
+    return diff === 0;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================
+//  SETTINGS LOCK — AUTH SESSION (in-memory, background-owned)
+// ============================================================
+
+// The timestamp until which the settings page is considered authenticated.
+// Stored only in memory — resets on service worker restart.
+let lockAuthenticatedUntil = 0;
+
+/**
+ * Returns true if the current authentication session is still valid.
+ */
+function isAuthSessionActive() {
+  return Date.now() < lockAuthenticatedUntil;
+}
+
+/**
+ * Grants a new authentication session for LOCK_AUTH_TIMEOUT_MS milliseconds.
+ */
+function grantAuthSession() {
+  lockAuthenticatedUntil = Date.now() + LOCK_AUTH_TIMEOUT_MS;
+}
+
+/**
+ * Revokes the current authentication session immediately.
+ */
+function revokeAuthSession() {
+  lockAuthenticatedUntil = 0;
+}
+
+// ============================================================
 //  MESSAGE HANDLER (popup & content scripts → background)
 // ============================================================
 
@@ -722,6 +922,137 @@ async function handleMessage(message) {
     
     case MSG.RECORD_DISTRACTION_BLOCKED: {
       return await incrementDistractionsBlocked();
+    }
+
+    // ---- Analytics ----
+    case MSG.GET_ANALYTICS: {
+      // Flush current session so the returned data includes time up to this moment
+      await flush(false);
+      const data = await getAnalytics(message.date || null);
+      return { success: true, data };
+    }
+
+    // ---- Settings Lock ----
+    case MSG.LOCK_GET_STATUS: {
+      const cfg = await getLockConfig();
+      return {
+        enabled:            cfg.enabled,
+        unlockDelay:        cfg.unlockDelay,
+        failedAttempts:     cfg.failedAttempts,
+        lockoutUntil:       cfg.lockoutUntil,
+        authenticatedUntil: lockAuthenticatedUntil,
+        isAuthenticated:    isAuthSessionActive(),
+      };
+    }
+
+    case MSG.LOCK_SETUP: {
+      const val = validatePassword(message.password);
+      if (!val.isValid) {
+        return { success: false, error: 'invalid_password', ruleStatus: val.ruleStatus };
+      }
+      const { hash, salt } = await hashPassword(message.password);
+      await setLockConfig({
+        enabled:        true,
+        hash,
+        salt,
+        unlockDelay:    0,
+        failedAttempts: 0,
+        lockoutUntil:   0,
+      });
+      revokeAuthSession();
+      return { success: true };
+    }
+
+    case MSG.LOCK_VERIFY: {
+      const cfg = await getLockConfig();
+      if (!cfg.enabled) return { success: true, wasLocked: false };
+
+      // Check lockout
+      if (cfg.lockoutUntil && Date.now() < cfg.lockoutUntil) {
+        return {
+          success: false,
+          locked: true,
+          lockoutRemainingMs: cfg.lockoutUntil - Date.now(),
+        };
+      }
+
+      const ok = await verifyPassword(message.password, cfg.hash, cfg.salt);
+      if (ok) {
+        await updateLockConfig({ failedAttempts: 0, lockoutUntil: 0 });
+        grantAuthSession();
+        return { success: true };
+      } else {
+        const newAttempts = (cfg.failedAttempts || 0) + 1;
+        const lockoutUntil = newAttempts >= LOCK_MAX_ATTEMPTS
+          ? Date.now() + LOCK_COOLDOWN_MS
+          : 0;
+        await updateLockConfig({ failedAttempts: newAttempts, lockoutUntil });
+        return {
+          success: false,
+          locked: lockoutUntil > 0,
+          lockoutRemainingMs: lockoutUntil > 0 ? LOCK_COOLDOWN_MS : 0,
+          attemptsRemaining: Math.max(0, LOCK_MAX_ATTEMPTS - newAttempts),
+        };
+      }
+    }
+
+    case MSG.LOCK_DISABLE: {
+      const cfg = await getLockConfig();
+      if (!cfg.enabled) return { success: true };
+
+      // Check lockout
+      if (cfg.lockoutUntil && Date.now() < cfg.lockoutUntil) {
+        return {
+          success: false,
+          locked: true,
+          lockoutRemainingMs: cfg.lockoutUntil - Date.now(),
+        };
+      }
+
+      const ok = await verifyPassword(message.password, cfg.hash, cfg.salt);
+      if (!ok) {
+        const newAttempts = (cfg.failedAttempts || 0) + 1;
+        const lockoutUntil = newAttempts >= LOCK_MAX_ATTEMPTS
+          ? Date.now() + LOCK_COOLDOWN_MS
+          : 0;
+        await updateLockConfig({ failedAttempts: newAttempts, lockoutUntil });
+        return { success: false, locked: lockoutUntil > 0, lockoutRemainingMs: lockoutUntil > 0 ? LOCK_COOLDOWN_MS : 0 };
+      }
+
+      await setLockConfig({
+        enabled: false, hash: null, salt: null,
+        unlockDelay: 0, failedAttempts: 0, lockoutUntil: 0,
+      });
+      revokeAuthSession();
+      return { success: true };
+    }
+
+    case MSG.LOCK_CHANGE_PASSWORD: {
+      const cfg = await getLockConfig();
+      if (!cfg.enabled) return { success: false, error: 'lock_not_enabled' };
+
+      // Must verify current password first
+      const ok = await verifyPassword(message.currentPassword, cfg.hash, cfg.salt);
+      if (!ok) return { success: false, error: 'invalid_password' };
+
+      const val = validatePassword(message.newPassword);
+      if (!val.isValid) {
+        return { success: false, error: 'invalid_password', ruleStatus: val.ruleStatus };
+      }
+
+      const { hash, salt } = await hashPassword(message.newPassword);
+      await updateLockConfig({ hash, salt, failedAttempts: 0, lockoutUntil: 0 });
+      grantAuthSession();
+      return { success: true };
+    }
+
+    case MSG.LOCK_UPDATE_DELAY: {
+      // Only allowed when an active auth session exists
+      if (!isAuthSessionActive()) {
+        return { success: false, error: 'not_authenticated' };
+      }
+      await updateLockConfig({ unlockDelay: message.delaySeconds || 0 });
+      return { success: true };
     }
 
     default:

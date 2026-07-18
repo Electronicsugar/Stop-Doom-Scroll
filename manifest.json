@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Stay focused. Block doomscrolling. Achieve your goals.",
 
   "browser_specific_settings": {
@@ -38,7 +38,8 @@
     "tabs",
     "activeTab",
     "webNavigation",
-    "alarms"
+    "alarms",
+    "windows"
   ],
   "host_permissions": [
     "*://*.youtube.com/*",

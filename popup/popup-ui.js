@@ -5,12 +5,12 @@
  *  - Theme loading (light/dark) on startup
  *  - Date display (day name, number, month/year)
  *  - Daily motivational quote on sticky note
- *  - Progress bar & task count sync via MutationObserver
+ *  - Task count sync via MutationObserver
  *  - Break CTA description from storage
  *
- *  NOTE: The focus session elapsed timer (#focus-timer-display) is now
- *  driven by popup.js, which reads session.focusStartedAt from storage.
- *  This file no longer owns that timer.
+ *  NOTE: The focus session elapsed timer (#focus-timer-display) is driven
+ *  by popup.js, which reads session.focusStartedAt from storage.
+ *  This file does not own that timer.
  *
  * This file does NOT touch extension state, messaging, or any popup.js logic.
  */
@@ -59,6 +59,7 @@
   // ── Focus session elapsed timer ───────────────────────────────────────────
   // Owned by popup.js (reads session.focusStartedAt from storage).
   // Do NOT start a local timer here — it would reset every popup open.
+
   // ── Break CTA description from storage ────────────────────────────────────
   try {
     var api = (typeof browser !== 'undefined') ? browser : chrome;
@@ -71,11 +72,11 @@
     }
   } catch (e) { /* ignore */ }
 
-  // ── Progress bar & task count sync ────────────────────────────────────────
+  // ── Task count sync ────────────────────────────────────────────────────────
+  // Watches the todo list for DOM changes and updates the task count badge.
+  // Progress bar has been removed — only task count and goal text remain.
   function updateMission() {
     var goalEl  = document.getElementById('mission-goal');
-    var barEl   = document.getElementById('progress-bar-fill');
-    var pctEl   = document.getElementById('progress-pct');
     var listEl  = document.getElementById('todo-list');
     var countEl = document.getElementById('task-count');
     if (!listEl) return;
@@ -84,11 +85,9 @@
     var completed = listEl.querySelectorAll('.todo-item.completed');
     var total     = items.length;
     var done      = completed.length;
-    var pct       = total > 0 ? Math.round((done / total) * 100) : 0;
 
-    if (barEl)   barEl.style.width     = pct + '%';
-    if (pctEl)   pctEl.textContent     = pct + '%';
-    if (countEl) countEl.textContent   = total > 0 ? done + ' / ' + total : '';
+    // Update task count badge (e.g. "2 / 5")
+    if (countEl) countEl.textContent = total > 0 ? done + ' / ' + total : '';
 
     // Pull goal text from first goal-badge item
     if (goalEl) {
