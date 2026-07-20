@@ -29,7 +29,7 @@ import {
 import { validatePassword } from '../lib/password.js';
 
 import {
-  startTracking, stopTracking, flush, getAnalytics,
+  startTracking, stopTracking, flush, getAnalytics, clearAnalytics,
 } from '../lib/analytics.js';
 
 const api = (typeof browser !== 'undefined') ? browser : chrome;
@@ -43,6 +43,7 @@ async function initSession() {
   await setSession(session);
   await clearCompletedTodos();
   await clearRecentUrls();
+  await clearAnalytics();
 }
 
 // Browser launched → new session
@@ -775,12 +776,17 @@ async function handleMessage(message) {
     // ---- Break actions ----
     case MSG.START_BREAK: {
       const settings = await getSettings();
+      const currentSess = await getSession();
+      
+      const maxBreaks = settings.breakMaxPerDayCount ?? 5;
+      if ((currentSess.breakCount || 0) >= maxBreaks) {
+        return { success: false, reason: 'limit_reached' };
+      }
+
       const maxMin = settings.breakMaxMinutes || 15;
       const duration = Math.min(message.minutes, maxMin);
       const expiresAt = Date.now() + duration * 60 * 1000;
 
-      // Read current session to accumulate focus time before break
-      const currentSess = await getSession();
       const nowMs = Date.now();
       const segmentMs = currentSess.focusStartedAt
         ? nowMs - currentSess.focusStartedAt

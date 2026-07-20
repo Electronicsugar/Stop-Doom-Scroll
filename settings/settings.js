@@ -25,12 +25,15 @@ const igBlockFeed    = document.getElementById('ig-block-feed');
 const breakEnabled   = document.getElementById('break-enabled');
 const breakMax       = document.getElementById('break-max');
 const breakMaxValue  = document.getElementById('break-max-value');
+const breakMaxPerDay      = document.getElementById('break-max-per-day');
+const breakPerDayValue    = document.getElementById('break-per-day-value');
+const breakPerDayRow      = document.getElementById('break-per-day-row');
+const breakPerDaySlider   = document.getElementById('break-per-day-slider');
 const goalInference  = document.getElementById('goal-inference');
 const autoChill      = document.getElementById('auto-chill');
 const showMission    = document.getElementById('show-mission');
 const showTasks      = document.getElementById('show-tasks');
 const showFocusSession = document.getElementById('show-focus-session');
-const showFocusStreak  = document.getElementById('show-focus-streak');
 const breakDurationRow = document.getElementById('break-duration-row');
 const breakDurationSlider = document.getElementById('break-duration-slider');
 const focusReminder    = document.getElementById('focus-reminder');
@@ -90,6 +93,8 @@ function toggleBreakSettingsVisibility() {
   const isEnabled = breakEnabled.checked;
   if (breakDurationRow) breakDurationRow.style.display = isEnabled ? '' : 'none';
   if (breakDurationSlider) breakDurationSlider.style.display = isEnabled ? '' : 'none';
+  if (breakPerDayRow) breakPerDayRow.style.display = isEnabled ? '' : 'none';
+  if (breakPerDaySlider) breakPerDaySlider.style.display = isEnabled ? '' : 'none';
 }
 
 function toggleReminderSettingsVisibility() {
@@ -120,6 +125,15 @@ function updateSliderFill() {
   breakMax.style.setProperty('--fill', `${percentage}%`);
 }
 
+function updateBreakPerDaySliderFill() {
+  if (!breakMaxPerDay) return;
+  const min = parseFloat(breakMaxPerDay.min) || 1;
+  const max = parseFloat(breakMaxPerDay.max) || 10;
+  const val = parseFloat(breakMaxPerDay.value) || 5;
+  const percentage = ((val - min) / (max - min)) * 100;
+  breakMaxPerDay.style.setProperty('--fill', `${percentage}%`);
+}
+
 function updateReminderSliderFill() {
   if (!reminderInterval) return;
   const min = parseFloat(reminderInterval.min) || 5;
@@ -145,12 +159,17 @@ async function loadSettings() {
 
     updateSliderFill();
 
+    if (breakMaxPerDay) {
+      breakMaxPerDay.value = s.breakMaxPerDayCount ?? DEFAULT_SETTINGS.breakMaxPerDayCount ?? 5;
+      updateBreakPerDaySliderFill();
+      if (breakPerDayValue) breakPerDayValue.textContent = breakMaxPerDay.value + ' breaks';
+    }
+
     goalInference.checked = s.goalInferenceEnabled  ?? DEFAULT_SETTINGS.goalInferenceEnabled;
     autoChill.checked     = s.autoChillEnabled      ?? DEFAULT_SETTINGS.autoChillEnabled;
     showMission.checked   = s.showMission           ?? DEFAULT_SETTINGS.showMission;
     showTasks.checked     = s.showTasks             ?? DEFAULT_SETTINGS.showTasks;
     showFocusSession.checked = s.showFocusSession   ?? DEFAULT_SETTINGS.showFocusSession;
-    showFocusStreak.checked  = s.showFocusStreak    ?? DEFAULT_SETTINGS.showFocusStreak;
     focusReminder.checked = s.focusReminderEnabled  ?? DEFAULT_SETTINGS.focusReminderEnabled;
     reminderInterval.value = s.reminderInterval     ?? DEFAULT_SETTINGS.reminderInterval;
 
@@ -182,12 +201,12 @@ async function saveSettings() {
     },
     breakButtonEnabled:  breakEnabled.checked,
     breakMaxMinutes:     parseInt(breakMax.value, 10),
+    breakMaxPerDayCount: breakMaxPerDay ? parseInt(breakMaxPerDay.value, 10) : (DEFAULT_SETTINGS.breakMaxPerDayCount ?? 5),
     goalInferenceEnabled: goalInference.checked,
     autoChillEnabled:     autoChill.checked,
     showMission:          showMission.checked,
     showTasks:            showTasks.checked,
     showFocusSession:     showFocusSession.checked,
-    showFocusStreak:      showFocusStreak.checked,
     focusReminderEnabled: focusReminder.checked,
     reminderInterval:     parseInt(reminderInterval.value, 10),
   };
@@ -213,7 +232,7 @@ function showSaveIndicator() {
 
 // ── Event Listeners (non-lock) ───────────────────────────────────────────────
 
-[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill, showMission, showTasks, showFocusSession, showFocusStreak, focusReminder].forEach(el => {
+[ytBlockShorts, ytBlockFeed, igBlockReels, igBlockFeed, breakEnabled, goalInference, autoChill, showMission, showTasks, showFocusSession, focusReminder].forEach(el => {
   el.addEventListener('change', saveSettings);
 });
 
@@ -222,6 +241,15 @@ breakMax.addEventListener('input', () => {
   updateSliderFill();
 });
 breakMax.addEventListener('change', saveSettings);
+
+if (breakMaxPerDay) {
+  breakMaxPerDay.addEventListener('input', () => {
+    const label = breakMaxPerDay.value === '1' ? '1 break' : breakMaxPerDay.value + ' breaks';
+    if (breakPerDayValue) breakPerDayValue.textContent = label;
+    updateBreakPerDaySliderFill();
+  });
+  breakMaxPerDay.addEventListener('change', saveSettings);
+}
 
 if (reminderInterval) {
   reminderInterval.addEventListener('input', () => {

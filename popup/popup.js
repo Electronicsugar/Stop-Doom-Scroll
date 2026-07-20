@@ -89,8 +89,6 @@ async function init() {
   render();
   setupEventListeners();
   startFocusTimer();
-  // Load analytics after initial render (non-blocking)
-  loadAnalytics();
 }
 
 // ────────────────────────────────────────────
@@ -110,7 +108,6 @@ function renderSectionsVisibility() {
   toggleSec($('mission-section'), s?.showMission !== false);
   toggleSec($('tasks-section'), s?.showTasks !== false);
   toggleSec($('focus-section'), s?.showFocusSession !== false);
-  toggleSec($('streak-card'), s?.showFocusStreak !== false);
 }
 
 function render() {
@@ -135,8 +132,8 @@ function render() {
   renderBadges();
   renderTodos();
   renderBreakButton();
-  renderStreak();
   renderFocusSession();
+  renderStreak();
   renderSectionsVisibility();
 }
 
@@ -158,38 +155,27 @@ function renderBadges() {
   }
 }
 
-// ────────────────────────────────────────────
-// STREAK
-// ────────────────────────────────────────────
-function renderStreak() {
-  const streak = currentState.streak;
-  if (!streak) return;
-
-  const streakToday = $('streak-today');
-  const streakDistractions = $('streak-distractions');
-  const streakCurrentVal = $('streak-current-val');
-
-  if (streakToday) streakToday.textContent = Math.round((streak.todayFocusMs || 0) / 60000) + 'm';
-  if (streakDistractions) streakDistractions.textContent = streak.distractionsBlocked || 0;
-  if (streakCurrentVal) streakCurrentVal.textContent = (streak.currentStreak || 0) + ' days';
-}
 
 // ────────────────────────────────────────────
 // FOCUS SESSION
 // ────────────────────────────────────────────
 function renderFocusSession() {
   const s = currentState.session;
+  const streak = currentState.streak;
   if (!s) return;
 
-  // Stats
-  let sessionMs = 0;
-  if (s.sessionState !== 'BREAK' && s.focusStartedAt) {
-    sessionMs = (Date.now() - s.focusStartedAt) + (s.accumulatedFocusMs || 0);
-  } else {
-    sessionMs = s.accumulatedFocusMs || 0;
-  }
-  
-  if (statFocused) statFocused.textContent = Math.round(sessionMs / 60000) + 'm';
+  // Today's Focus: use streak.todayFocusMs for the total daily focus time.
+  // Falls back to session accumulated focus if streak data is unavailable.
+  const todayFocusMs = streak?.todayFocusMs != null
+    ? streak.todayFocusMs
+    : (() => {
+        if (s.sessionState !== 'BREAK' && s.focusStartedAt) {
+          return (Date.now() - s.focusStartedAt) + (s.accumulatedFocusMs || 0);
+        }
+        return s.accumulatedFocusMs || 0;
+      })();
+
+  if (statFocused) statFocused.textContent = Math.round(todayFocusMs / 60000) + 'm';
   if (statBreaks) statBreaks.textContent = s.breakCount || 0;
   
   if (statStarted && s.sessionStartedAt) {
@@ -284,7 +270,28 @@ function renderTodos() {
 // ────────────────────────────────────────────
 function renderBreakButton() {
   const enabled = currentState.settings?.breakButtonEnabled ?? true;
-  breakBtn.style.display = enabled ? '' : 'none';
+  if (!enabled) {
+    breakBtn.style.display = 'none';
+    return;
+  }
+  breakBtn.style.display = '';
+
+  const maxBreaks = currentState.settings?.breakMaxPerDayCount ?? 5;
+  const breaksToday = currentState.session?.breakCount ?? currentState.streak?.todayBreaks ?? 0;
+  
+  if (breaksToday >= maxBreaks) {
+    breakBtn.disabled = true;
+    breakBtn.textContent = 'Limit Reached';
+    breakBtn.style.opacity = '0.5';
+    breakBtn.style.cursor = 'not-allowed';
+    breakBtn.title = 'You have reached your daily break limit.';
+  } else {
+    breakBtn.disabled = false;
+    breakBtn.textContent = 'Take Break';
+    breakBtn.style.opacity = '1';
+    breakBtn.style.cursor = 'pointer';
+    breakBtn.title = 'Take a break';
+  }
 }
 
 
@@ -534,11 +541,8 @@ function updateTimerDisplay(remainingMs) {
   const sec = totalSec % 60;
   
   const timeStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  timerDisplay.innerHTML = `
-    <div style="font-size: 12px; font-weight: 500; opacity: 0.6; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">On Break</div>
-    <div>${timeStr}</div>
-    <div style="font-size: 11px; opacity: 0.5; margin-top: 2px;">remaining</div>
-  `;
+  // The ring shows only the countdown; "ON BREAK" label is a static element above the ring.
+  timerDisplay.textContent = timeStr;
 
   // SVG ring progress
   const circumference = 2 * Math.PI * 54;          // r = 54
@@ -572,6 +576,7 @@ const SECTIONS = {
   main:          popupMain,
   captcha:       breakSection,
   'break-active': breakActiveSection,
+  analytics:     $('analytics-view-section'),
 };
 
 function showSection(name) {
@@ -591,13 +596,9 @@ function showSection(name) {
 }
 
 // ────────────────────────────────────────────
-// ANALYTICS
+// ANALYTICS & STREAK
 // ────────────────────────────────────────────
 
-/**
- * Formats a duration in seconds into a human-readable string.
- * Examples: 7542s → "2h 5m", 3660s → "1h 1m", 90s → "1m", 42s → "42s"
- */
 function formatDuration(seconds) {
   if (seconds < 60) return seconds + 's';
   const h = Math.floor(seconds / 3600);
@@ -606,32 +607,43 @@ function formatDuration(seconds) {
   return m + 'm';
 }
 
-/**
- * Fetches today's analytics from the background and renders the analytics card.
- * Non-blocking — called after the main render completes.
- */
+function renderStreak() {
+  const streak = currentState.streak;
+  const session = currentState.session;
+
+  const streakDistractions = $('streak-distractions');
+  const streakBreaksToday  = $('streak-breaks-today');
+  const streakAvgBreaks    = $('streak-avg-breaks');
+  const streakCurrentVal   = $('streak-current-val');
+
+  if (streakDistractions) streakDistractions.textContent = streak?.distractionsBlocked || 0;
+
+  const breaksToday = session?.breakCount ?? streak?.todayBreaks ?? 0;
+  if (streakBreaksToday) streakBreaksToday.textContent = breaksToday;
+
+  const avgBreaks = streak?.avgDailyBreaks != null
+    ? Math.round(streak.avgDailyBreaks * 10) / 10
+    : 0;
+  if (streakAvgBreaks) streakAvgBreaks.textContent = avgBreaks;
+
+  if (streakCurrentVal) streakCurrentVal.textContent = (streak?.currentStreak || 0) + ' days';
+}
+
 async function loadAnalytics() {
   try {
     const res = await sendMessage({ type: MSG.GET_ANALYTICS });
     if (res && res.success && Array.isArray(res.data)) {
       currentState.analytics = res.data;
-      renderAnalytics(res.data);
+      renderAnalyticsList(res.data);
     }
   } catch (err) {
-    // Analytics failure is non-critical — leave the empty state
+    console.error('Analytics load error:', err);
   }
 }
 
-/**
- * Renders the analytics card with today's top sites.
- * Accepts an array of { hostname, seconds, visits, lastVisited } objects,
- * pre-sorted by seconds descending.
- * Shows at most 5 rows in the UI (storage retains everything).
- */
-function renderAnalytics(data) {
+function renderAnalyticsList(data) {
   const listEl = $('analytics-list');
   if (!listEl) return;
-
   listEl.innerHTML = '';
 
   if (!data || data.length === 0) {
@@ -642,16 +654,11 @@ function renderAnalytics(data) {
     return;
   }
 
-  // Show top 5 (storage holds all; UI is intentionally compact)
-  const top = data.slice(0, 5);
-
-  top.forEach((entry, index) => {
+  data.forEach((entry, index) => {
     const row = document.createElement('div');
     row.className = 'analytics-row';
-    // Staggered fade-in: each row animates ~150ms after the previous
     row.style.animationDelay = (index * 60) + 'ms';
 
-    // Favicon — Google favicon service with fallback globe icon
     const favicon = document.createElement('img');
     favicon.className = 'analytics-favicon';
     favicon.width = 16;
@@ -659,19 +666,15 @@ function renderAnalytics(data) {
     favicon.alt = '';
     favicon.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(entry.hostname)}`;
     favicon.onerror = function () {
-      // Fallback: replace with an inline globe SVG
       this.replaceWith(createGlobeIcon());
     };
 
-    // Site name (capitalize first letter for readability)
     const name = document.createElement('span');
     name.className = 'analytics-site';
-    // Show hostname but strip the TLD for short names
-    const shortName = entry.hostname.split('.')[0];
+    const shortName = entry.hostname.replace(/^www\./, '');
     name.textContent = shortName.charAt(0).toUpperCase() + shortName.slice(1);
     name.title = entry.hostname;
 
-    // Duration
     const dur = document.createElement('span');
     dur.className = 'analytics-duration';
     dur.textContent = formatDuration(entry.seconds);
@@ -683,7 +686,6 @@ function renderAnalytics(data) {
   });
 }
 
-/** Creates a small SVG globe icon for favicon fallback. */
 function createGlobeIcon() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '16');
@@ -759,6 +761,20 @@ function setupEventListeners() {
 
   // Settings
   settingsBtn.addEventListener('click', openSettings);
+
+  // Analytics
+  const analyticsBtn = $('analytics-btn');
+  if (analyticsBtn) {
+    analyticsBtn.addEventListener('click', () => {
+      showSection('analytics');
+      loadAnalytics();
+    });
+  }
+
+  const analyticsBackBtn = $('analytics-back-btn');
+  if (analyticsBackBtn) {
+    analyticsBackBtn.addEventListener('click', () => showSection('main'));
+  }
 
   // Stop focus timer when the popup is closed to free the interval
   window.addEventListener('unload', stopFocusTimer);

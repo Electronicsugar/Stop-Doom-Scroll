@@ -63,7 +63,6 @@
       <section class="card-section mission-section" id="mission-section">
         <div class="section-label">TODAY'S MISSION</div>
         <div class="mission-goal" id="mission-goal">Add your goal above</div>
-        <div class="estimated-time" id="estimated-time">Estimated time: —</div>
       </section>
 
       <div class="section-divider"></div>
@@ -134,10 +133,10 @@
           </div>
         </div>
 
-        <!-- Session stats: Focused / Breaks / Started -->
+        <!-- Session stats: Today's Focus / Breaks / Started -->
         <div class="session-stats" id="session-stats">
           <div class="stat-item">
-            <span class="stat-label">Focused</span>
+            <span class="stat-label">Today's Focus</span>
             <span class="stat-value" id="stat-focused">0m</span>
           </div>
           <div class="stat-sep"></div>
@@ -153,35 +152,7 @@
         </div>
       </section>
 
-      <div class="section-divider"></div>
-
-      <!-- SECTION 5: Focus Streak -->
-      <section class="card-section streak-section" id="streak-card">
-        <div class="section-label">🔥 FOCUS STREAK</div>
-        <div class="streak-grid">
-          <div class="streak-item">
-            <span class="streak-label">Today's Focus</span>
-            <span class="streak-value" id="streak-today">0m</span>
-          </div>
-          <div class="streak-item">
-            <span class="streak-label">Distractions Blocked</span>
-            <span class="streak-value" id="streak-distractions">0</span>
-          </div>
-          <div class="streak-item">
-            <span class="streak-label">Current Streak</span>
-            <span class="streak-value" id="streak-current-val">0 days</span>
-          </div>
-          <!-- Analytics card: full-width, replaces Longest Session -->
-          <div class="streak-item streak-item--analytics" id="analytics-item">
-            <span class="streak-label">ANALYTICS</span>
-            <div class="analytics-list" id="analytics-list">
-              <span class="analytics-empty">No browsing data yet.</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="section-divider"></div>
+      <!-- Note: Analytics and Browsing Today have been moved to a separate page -->
 
       <!-- SECTION 6: Next Break -->
       <section class="card-section break-cta-section popup-footer" id="popup-footer">
@@ -245,6 +216,9 @@
           </svg>
         </div>
 
+        <!-- ON BREAK label — above the ring timer -->
+        <div class="break-on-break-label" aria-live="polite">ON BREAK</div>
+
         <!-- Ring timer -->
         <div class="break-timer-ring" id="break-timer-ring">
           <svg viewBox="0 0 120 120">
@@ -260,10 +234,59 @@
           <div class="timer-display-break" id="timer-display">15:00</div>
         </div>
 
-        <h2 class="break-active-title">Break Time</h2>
         <p class="break-status">Enjoy your break. Feeds are unblocked.</p>
         <p class="break-status-sub break-quote"><em>Rest is productive too.</em></p>
         <button id="end-break-btn" class="fg-btn fg-btn-outline-danger fg-btn-md">End Break Early</button>
+      </div>
+    </section>
+
+    <!-- ====== ANALYTICS VIEW ====== -->
+    <section class="analytics-view-section" id="analytics-view-section">
+      <div class="analytics-view-inner">
+        <!-- Header -->
+        <div class="analytics-view-header">
+          <button id="analytics-back-btn" class="analytics-back-btn" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h2 class="analytics-view-title">Analytics</h2>
+        </div>
+        
+        <div class="analytics-view-content">
+          <!-- SECTION: Analytics (Streak) -->
+          <div class="analytics-section-label">OVERVIEW</div>
+          <section class="card-section streak-section" id="streak-card">
+            <div class="streak-grid">
+              <div class="streak-item">
+                <span class="streak-label">Blocked</span>
+                <span class="streak-value" id="streak-distractions">0</span>
+              </div>
+              <div class="streak-item">
+                <span class="streak-label">Breaks Today</span>
+                <span class="streak-value" id="streak-breaks-today">0</span>
+              </div>
+              <div class="streak-item">
+                <span class="streak-label">Avg Daily Breaks</span>
+                <span class="streak-value" id="streak-avg-breaks">0</span>
+              </div>
+              <div class="streak-item">
+                <span class="streak-label">Current Streak</span>
+                <span class="streak-value" id="streak-current-val">0 days</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="analytics-divider"></div>
+
+          <!-- SECTION: Browsing Today -->
+          <div class="analytics-section-label">HISTORY</div>
+          <section class="card-section analytics-section" id="analytics-section">
+            <div class="analytics-list" id="analytics-list">
+              <span class="analytics-empty">No browsing data yet.</span>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
 

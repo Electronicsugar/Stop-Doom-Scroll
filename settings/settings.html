@@ -121,6 +121,15 @@
         <div class="slider-wrap" id="break-duration-slider">
           <input type="range" id="break-max" min="1" max="30" step="1" value="10" />
         </div>
+        <div class="setting-row range-row" id="break-per-day-row">
+          <div class="setting-label-group">
+            <span class="setting-label">Max Breaks Per Day</span>
+          </div>
+          <span class="range-value" id="break-per-day-value">5 breaks</span>
+        </div>
+        <div class="slider-wrap" id="break-per-day-slider">
+          <input type="range" id="break-max-per-day" min="1" max="10" step="1" value="5" />
+        </div>
       </section>
 
       <!-- ── FOCUS SETTINGS ── -->
@@ -185,13 +194,6 @@
           <span class="setting-label">Focus Session</span>
           <label class="toggle">
             <input type="checkbox" id="show-focus-session" />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Focus Streak</span>
-          <label class="toggle">
-            <input type="checkbox" id="show-focus-streak" />
             <span class="toggle-slider"></span>
           </label>
         </div>

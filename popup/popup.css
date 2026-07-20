@@ -712,45 +712,6 @@ input  { font-family: inherit; }
   flex-shrink: 0;
 }
 
-/* ====== FOCUS STREAK SECTION ====== */
-.streak-section {}
-.streak-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
-  margin-top: 4px;
-}
-.streak-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  background: var(--streak-item-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  transition: background var(--speed) var(--ease);
-}
-.streak-label {
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--ink-muted);
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.streak-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Analytics card — spans full grid width */
-.streak-item--analytics {
-  grid-column: 1 / -1;
-  padding: 10px 12px;
-}
-
 /* Analytics list container */
 .analytics-list {
   display: flex;
@@ -1144,4 +1105,173 @@ input  { font-family: inherit; }
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ====== ANALYTICS VIEW ====== */
+.analytics-view-section {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  background: var(--bg);
+  z-index: 100;
+}
+.analytics-view-section.active {
+  display: flex;
+  animation: slideInRight 300ms var(--ease) forwards;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.analytics-view-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 2;
+}
+
+.analytics-back-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--speed), color var(--speed);
+}
+.analytics-back-btn:hover {
+  background: var(--surface-elevated);
+  color: var(--ink);
+}
+
+.analytics-view-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.analytics-view-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.analytics-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  margin-bottom: -10px;
+}
+
+.analytics-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* Restored Analytics Components - Clean & Aesthetic */
+#streak-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+}
+
+.streak-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 16px;
+  column-gap: 16px;
+}
+.streak-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.streak-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.streak-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.analytics-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: analyticsRowFadeIn 200ms var(--ease) forwards;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.analytics-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+@keyframes analyticsRowFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.analytics-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.analytics-favicon--fallback {
+  color: var(--ink-muted);
+  stroke-width: 1.5;
+}
+.analytics-site {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.analytics-duration {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.analytics-empty {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-style: italic;
 }
