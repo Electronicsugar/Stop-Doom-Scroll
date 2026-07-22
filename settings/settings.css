@@ -1031,3 +1031,102 @@ input[type="range"]:focus-visible {
 
 .pw-strength-container[data-strength="strong"] .pw-strength-segment { background: var(--accent); }
 .pw-strength-container[data-strength="strong"] .pw-strength-label { color: var(--accent); }
+/* ── UNIVERSAL BLOCKER ── */
+.ub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+.ub-desc {
+  margin: 5px 0 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.ub-add-btn {
+  background: rgba(163, 184, 153, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(163, 184, 153, 0.2);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ub-add-btn:hover {
+  background: rgba(163, 184, 153, 0.2);
+  transform: translateY(-1px);
+}
+.ub-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ub-rule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+.ub-rule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ub-rule-pattern {
+  font-size: 14px;
+  color: var(--text-main);
+  font-family: monospace;
+}
+.ub-rule-type {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ub-rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ub-delete-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+.ub-delete-btn:hover {
+  opacity: 1;
+}
+.ub-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.ub-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.ub-select:focus {
+  border-color: var(--accent);
+}
+.ub-select option {
+  background: #1a1b18; /* var(--bg-color) */
+}

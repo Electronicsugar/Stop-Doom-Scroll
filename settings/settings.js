@@ -14,6 +14,8 @@
 
 import { MSG, DEFAULT_SETTINGS } from '../lib/constants.js';
 import { validatePassword, calculatePasswordStrength, PASSWORD_RULES } from '../lib/password.js';
+import { getBlockedUrls, addBlockedUrl, deleteBlockedUrl } from '../lib/storage.js';
+import { validateRule } from '../lib/urlMatcher.js';
 
 const api = (typeof browser !== 'undefined') ? browser : chrome;
 
@@ -49,6 +51,15 @@ const lockEnabled      = document.getElementById('lock-enabled');
 const lockManageRow    = document.getElementById('lock-manage-row');
 const lockManageBtn    = document.getElementById('lock-manage-btn');
 const lockStatusText   = document.getElementById('lock-status-text');
+
+// UB section elements
+const ubAddRuleBtn     = document.getElementById('ub-add-rule-btn');
+const ubRulesList      = document.getElementById('ub-rules-list');
+const ubPatternInput   = document.getElementById('ub-pattern-input');
+const ubTypeSelect     = document.getElementById('ub-type-select');
+const ubRuleError      = document.getElementById('ub-rule-error');
+const ubCancelBtn      = document.getElementById('ub-cancel-btn');
+const ubSaveBtn        = document.getElementById('ub-save-btn');
 
 // ── Lock dialog stacking guard ───────────────────────────────────────────────
 // Only one dialog may ever be visible. Track the active overlay here.
@@ -859,4 +870,87 @@ document.getElementById('lock-change-new')?.addEventListener('input', (e) => {
   handlePasswordInput(e.target, document.getElementById('change-pw-requirements'));
 });
 
-document.addEventListener('DOMContentLoaded', loadSettings);
+// ── UNIVERSAL BLOCKER LOGIC ──────────────────────────────────────────────────
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag]));
+}
+
+async function loadBlockedRules() {
+  if (!ubRulesList) return;
+  const rules = await getBlockedUrls();
+  ubRulesList.innerHTML = '';
+  
+  if (rules.length === 0) {
+    ubRulesList.innerHTML = '<div style="padding:15px; color:var(--text-muted); text-align:center;">No custom rules added yet.</div>';
+    return;
+  }
+  
+  rules.forEach(rule => {
+    const item = document.createElement('div');
+    item.className = 'ub-rule-item';
+    item.innerHTML = `
+      <div class="ub-rule-info">
+        <span class="ub-rule-pattern">${escapeHTML(rule.pattern)}</span>
+        <span class="ub-rule-type">${rule.type}</span>
+      </div>
+      <div class="ub-rule-actions">
+        <button class="ub-delete-btn" data-id="${rule.id}" aria-label="Delete rule" title="Delete">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        </button>
+      </div>
+    `;
+    item.querySelector('.ub-delete-btn').addEventListener('click', async () => {
+      await deleteBlockedUrl(rule.id);
+      loadBlockedRules();
+      showSaveIndicator();
+    });
+    ubRulesList.appendChild(item);
+  });
+}
+
+if (ubAddRuleBtn) {
+  ubAddRuleBtn.addEventListener('click', () => {
+    ubPatternInput.value = '';
+    ubTypeSelect.value = 'domain';
+    ubRuleError.style.display = 'none';
+    showOverlay('ub-add-overlay');
+  });
+
+  ubCancelBtn.addEventListener('click', () => hideOverlay('ub-add-overlay'));
+
+  ubSaveBtn.addEventListener('click', async () => {
+    const pattern = ubPatternInput.value.trim();
+    const type = ubTypeSelect.value;
+    
+    const validation = validateRule({ id: 'temp', pattern, type });
+    if (!validation.valid) {
+      ubRuleError.textContent = validation.error;
+      ubRuleError.style.display = 'block';
+      return;
+    }
+    
+    const saved = await addBlockedUrl({ pattern, type, enabled: true });
+    if (!saved) {
+      ubRuleError.textContent = 'Rule already exists or is invalid.';
+      ubRuleError.style.display = 'block';
+      return;
+    }
+    
+    hideOverlay('ub-add-overlay');
+    loadBlockedRules();
+    showSaveIndicator();
+  });
+}
+
+// Load UB rules alongside settings
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadBlockedRules();
+});

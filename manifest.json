@@ -42,10 +42,20 @@
     "windows"
   ],
   "host_permissions": [
-    "*://*.youtube.com/*",
-    "*://*.instagram.com/*"
+    "<all_urls>"
   ],
   "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": [
+        "*://chrome.google.com/webstore/*",
+        "*://chromewebstore.google.com/*",
+        "*://addons.mozilla.org/*",
+        "*://microsoftedge.microsoft.com/addons/*"
+      ],
+      "js": ["content/universalBlocker.js"],
+      "run_at": "document_start"
+    },
     {
       "matches": ["*://*.youtube.com/*"],
       "js": ["lib/theme.js", "content/content-common.js", "content/content-youtube.js"],
@@ -57,6 +67,12 @@
       "js": ["lib/theme.js", "content/content-common.js", "content/content-instagram.js"],
       "css": ["content/overlay.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/urlMatcher.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

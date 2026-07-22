@@ -100,6 +100,22 @@
         </div>
       </section>
 
+      <!-- ── UNIVERSAL BLOCKER ── -->
+      <div class="settings-section-label">UNIVERSAL BLOCKER</div>
+      <section class="settings-section">
+        <div class="ub-header">
+          <div>
+            <div class="setting-label">Blocked Websites</div>
+            <p class="ub-desc">Add custom websites to block (e.g., news, social media)</p>
+          </div>
+          <button id="ub-add-rule-btn" class="ub-add-btn">+ Add Rule</button>
+        </div>
+        
+        <div id="ub-rules-list" class="ub-rules-list">
+          <!-- Populated dynamically by settings.js -->
+        </div>
+      </section>
+
       <!-- ── BREAK SETTINGS ── -->
       <div class="settings-section-label">BREAK SETTINGS</div>
 
@@ -461,6 +477,35 @@
       <div class="lock-dialog-actions">
         <button class="lock-btn lock-btn-ghost" id="lock-change-cancel-btn">Cancel</button>
         <button class="lock-btn lock-btn-primary" id="lock-change-confirm-btn">Change Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── UNIVERSAL BLOCKER DIALOG ── -->
+  <div id="ub-add-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
+    <div class="lock-dialog">
+      <div class="lock-dialog-icon" aria-hidden="true">🌐</div>
+      <h2 class="lock-dialog-title" id="ub-modal-title">Add Block Rule</h2>
+      
+      <div class="ub-input-group">
+        <label for="ub-pattern-input" class="ub-label">Website URL or Pattern</label>
+        <input type="text" id="ub-pattern-input" class="lock-input" placeholder="e.g. reddit.com" />
+      </div>
+      
+      <div class="ub-input-group" style="margin-top: 15px;">
+        <label for="ub-type-select" class="ub-label">Match Type</label>
+        <select id="ub-type-select" class="ub-select">
+          <option value="domain">Domain (includes subdomains)</option>
+          <option value="path">Path (e.g. twitter.com/explore)</option>
+          <option value="exact">Exact URL</option>
+          <option value="wildcard">Wildcard (e.g. *.news.com/*)</option>
+        </select>
+      </div>
+
+      <p class="lock-error" id="ub-rule-error" style="display:none"></p>
+      <div class="lock-dialog-actions" style="margin-top: 25px;">
+        <button class="lock-btn lock-btn-ghost" id="ub-cancel-btn">Cancel</button>
+        <button class="lock-btn lock-btn-primary" id="ub-save-btn">Save Rule</button>
       </div>
     </div>
   </div>

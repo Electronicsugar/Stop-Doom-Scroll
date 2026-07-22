@@ -24,9 +24,11 @@ import {
   getSettings, updateSettings,
   getRecentUrls, addRecentUrl, clearRecentUrls,
   getLockConfig, setLockConfig, updateLockConfig,
+  getBlockedUrls,
 } from '../lib/storage.js';
 
 import { validatePassword } from '../lib/password.js';
+import { isBlocked, compileRule } from '../lib/urlMatcher.js';
 
 import {
   startTracking, stopTracking, flush, getAnalytics, clearAnalytics,
@@ -60,6 +62,32 @@ api.runtime.onInstalled.addListener((details) => {
 });
 
 // ============================================================
+//  UNIVERSAL WEBSITE BLOCKER CACHE
+// ============================================================
+
+let cachedBlockedRules = null;
+
+async function getCachedBlockedRules() {
+  if (cachedBlockedRules === null) {
+    const rules = await getBlockedUrls();
+    cachedBlockedRules = rules.map(compileRule);
+  }
+  return cachedBlockedRules;
+}
+
+api.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes[STORAGE_KEYS.BLOCKED_URLS]) {
+    cachedBlockedRules = changes[STORAGE_KEYS.BLOCKED_URLS].newValue.map(compileRule);
+    api.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        safeSendToTab(tab.id, { type: MSG.BLOCKED_URLS_UPDATED });
+      }
+    });
+  }
+});
+
+// ============================================================
 //  TAB URL TRACKING (for goal inference, opt-in)
 // ============================================================
 
@@ -87,30 +115,23 @@ api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 //  SPA NAVIGATION DETECTION (webNavigation → content scripts)
 // ============================================================
 
-const NAV_FILTER = {
-  url: [
-    { hostSuffix: 'youtube.com' },
-    { hostSuffix: 'instagram.com' },
-  ],
-};
-
 // Fires on pushState / replaceState (SPA navigation)
 api.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
   if (details.frameId !== 0) return; // Main frame only
   safeSendToTab(details.tabId, { type: MSG.URL_CHANGED, url: details.url });
-}, NAV_FILTER);
+});
 
 // Fires on full page load completion
 api.webNavigation.onCompleted.addListener(async (details) => {
   if (details.frameId !== 0) return;
   safeSendToTab(details.tabId, { type: MSG.URL_CHANGED, url: details.url });
-}, NAV_FILTER);
+});
 
 // Hash-based routing changes
 api.webNavigation.onReferenceFragmentUpdated.addListener(async (details) => {
   if (details.frameId !== 0) return;
   safeSendToTab(details.tabId, { type: MSG.URL_CHANGED, url: details.url });
-}, NAV_FILTER);
+});
 
 /** Safely send a message to a tab's content script (swallows errors) */
 function safeSendToTab(tabId, message) {
@@ -545,6 +566,11 @@ api.alarms.onAlarm.addListener(async (alarm) => {
     for (const tab of tabs) {
       safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
     }
+  } else if (alarm.name.startsWith('tempAllow_')) {
+    const tabId = parseInt(alarm.name.split('_')[1], 10);
+    if (!isNaN(tabId)) {
+      safeSendToTab(tabId, { type: MSG.BLOCKED_URLS_UPDATED });
+    }
   } else if (alarm.name === 'fg_chill_reminder') {
     const session = await getSession();
     if (!session.chillModeActive) return;
@@ -727,6 +753,35 @@ async function handleMessage(message) {
       // If chill mode was active, notify tabs to re-check blocking rules
       if (wasChilling) await notifyTabsToRecheck();
       return { success: true, session, todo };
+    }
+
+    // ---- Universal Website Blocker ----
+    case MSG.GET_BLOCK_STATUS: {
+      const url = message.url;
+      const tabId = sender.tab ? sender.tab.id : null;
+      if (!tabId) return { blocked: false, matchedRule: null };
+
+      // Check for temporary allow (tab-specific override)
+      const alarm = await api.alarms.get(`tempAllow_${tabId}`);
+      if (alarm) {
+        return { blocked: false, matchedRule: null };
+      }
+
+      const rules = await getCachedBlockedRules();
+      const matchedRule = isBlocked(url, rules);
+      if (matchedRule) {
+        return { blocked: true, matchedRule };
+      }
+      return { blocked: false, matchedRule: null };
+    }
+
+    case MSG.TEMP_ALLOW_URL: {
+      const tabId = sender.tab ? sender.tab.id : null;
+      if (tabId && message.durationMs) {
+        api.alarms.create(`tempAllow_${tabId}`, { delayInMinutes: message.durationMs / 60000 });
+        return { success: true };
+      }
+      return { success: false, error: 'Invalid parameters or missing tab context' };
     }
 
     case MSG.SKIP_GOAL: {
