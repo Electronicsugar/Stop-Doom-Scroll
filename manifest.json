@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sage",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Stay focused. Block doomscrolling. Achieve your goals.",
 
   "browser_specific_settings": {

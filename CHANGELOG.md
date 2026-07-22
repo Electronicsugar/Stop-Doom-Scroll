@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v1.2.1 — 2026-07-23
+### Fixed
+- **Settings Lock**: Fixed password clearing on toggle off, ensuring full password reset upon disabling lock settings.
+- **Settings Lock**: Fixed pending change execution so protected toggles update immediately after entering password.
+- **Content Scripts**: Standardized DOM hiding & element restoration helpers across YouTube and Instagram content scripts.
+
 ## v1.2.0 — 2026-07-23
 - **Universal Blocker**: Redesigned overlay to match Sage glass aesthetic, unblocks during breaks, removed temp allow button, eliminated screen flash.
 - **Settings Lock**: Streamlined flow with direct password prompt and instant unlock.

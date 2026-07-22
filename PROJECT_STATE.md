@@ -1,6 +1,6 @@
 # Project State
 
-## Current Version: v1.2.0
+## Current Version: v1.2.1
 
 ## Completed Features
 - **Foundation**: MV3 `manifest.json`, cross-browser storage abstraction, shared constants.
