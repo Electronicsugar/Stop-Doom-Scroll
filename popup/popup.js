@@ -271,10 +271,10 @@ function renderTodos() {
 function renderBreakButton() {
   const enabled = currentState.settings?.breakButtonEnabled ?? true;
   if (!enabled) {
-    breakBtn.style.display = 'none';
+    if (popupFooter) popupFooter.style.display = 'none';
     return;
   }
-  breakBtn.style.display = '';
+  if (popupFooter) popupFooter.style.display = '';
 
   const maxBreaks = currentState.settings?.breakMaxPerDayCount ?? 5;
   const breaksToday = currentState.session?.breakCount ?? currentState.streak?.todayBreaks ?? 0;

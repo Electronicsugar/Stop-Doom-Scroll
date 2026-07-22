@@ -523,12 +523,16 @@ input  { font-family: inherit; }
   justify-content: space-between;
   margin-bottom: 14px;
 }
-.focus-timer-block { flex: 1; }
-.focus-timer-row {
+.focus-timer-block {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 4px;
+}
+.focus-timer-container {
+  display: flex;
+  flex-direction: column;
 }
 .focus-timer {
   font-family: var(--font-display);
@@ -543,7 +547,7 @@ input  { font-family: inherit; }
 .focus-timer-sub {
   font-size: 10.5px;
   color: var(--ink-muted);
-  margin-bottom: 8px;
+  margin-top: 4px;
 }
 
 

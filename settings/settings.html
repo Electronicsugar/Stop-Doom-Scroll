@@ -103,7 +103,7 @@
       <!-- ── UNIVERSAL BLOCKER ── -->
       <div class="settings-section-label">UNIVERSAL BLOCKER</div>
       <section class="settings-section">
-        <div class="ub-header">
+        <div class="ub-header" data-lock-protected>
           <div>
             <div class="setting-label">Blocked Websites</div>
             <p class="ub-desc">Add custom websites to block (e.g., news, social media)</p>
@@ -226,7 +226,12 @@
             <!-- Three-dot selector: auto, light, and dark -->
             <div class="theme-dots" id="theme-dots" role="group" aria-label="Select theme">
               <button class="theme-dot theme-dot-auto active" id="theme-dot-auto"
-                      title="Auto theme" aria-pressed="true"></button>
+                      title="Auto theme" aria-pressed="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10.5" fill="#E8E5DE" />
+                  <path d="M12 1.5a10.5 10.5 0 0 1 0 21Z" fill="#22262A" />
+                </svg>
+              </button>
               <button class="theme-dot theme-dot-light" id="theme-dot-light"
                       title="Light theme" aria-pressed="false"></button>
               <button class="theme-dot theme-dot-dark" id="theme-dot-dark"
@@ -251,11 +256,6 @@
             <input type="checkbox" id="lock-enabled" />
             <span class="toggle-slider"></span>
           </label>
-        </div>
-        <!-- Manage row: shown when lock is enabled -->
-        <div id="lock-manage-row" class="setting-row lock-manage-row" style="display:none">
-          <span class="setting-label lock-status-text" id="lock-status-text">Enabled</span>
-          <button class="lock-manage-btn" id="lock-manage-btn">Manage…</button>
         </div>
       </section>
 
@@ -384,102 +384,7 @@
     </div>
   </div>
 
-  <!-- ── UNLOCK DELAY COUNTDOWN OVERLAY ── -->
-  <div id="lock-delay-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
-    <div class="lock-dialog lock-dialog--narrow">
-      <div class="lock-dialog-icon" aria-hidden="true">⏳</div>
-      <h2 class="lock-dialog-title">Unlock requested.</h2>
-      <p class="lock-dialog-desc">Please wait <span id="lock-delay-countdown" class="lock-countdown-value">60</span> seconds…</p>
-      <div class="lock-dialog-actions">
-        <button class="lock-btn lock-btn-ghost" id="lock-delay-cancel-btn">Cancel</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── MANAGE LOCK DIALOG (password change, delay, disable) ── -->
-  <div id="lock-manage-overlay" class="lock-overlay" role="dialog" aria-modal="true" aria-labelledby="lock-manage-title" style="display:none">
-    <div class="lock-dialog">
-      <h2 class="lock-dialog-title" id="lock-manage-title">Settings Lock</h2>
-
-      <!-- Current password for any action in this dialog -->
-      <div class="lock-manage-section">
-        <label class="lock-field-label">Password</label>
-        <div class="lock-input-wrap">
-          <input type="password" id="lock-manage-password" class="lock-input" placeholder="••••••••" autocomplete="current-password" />
-          <button type="button" class="lock-eye-btn" id="lock-manage-eye" aria-label="Show password" tabindex="-1">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-        <p class="lock-error" id="lock-manage-error" style="display:none"></p>
-      </div>
-
-      <!-- Unlock delay selector -->
-      <div class="lock-manage-section">
-        <label class="lock-field-label">Unlock Delay</label>
-        <div class="lock-radio-group">
-          <label class="lock-radio"><input type="radio" name="unlock-delay" value="0" id="delay-off" /> Off</label>
-          <label class="lock-radio"><input type="radio" name="unlock-delay" value="30" id="delay-30s" /> 30 seconds</label>
-          <label class="lock-radio"><input type="radio" name="unlock-delay" value="60" id="delay-60s" /> 60 seconds</label>
-          <label class="lock-radio"><input type="radio" name="unlock-delay" value="300" id="delay-5m" /> 5 minutes</label>
-        </div>
-      </div>
-
-      <div class="lock-dialog-actions lock-manage-actions">
-        <button class="lock-btn lock-btn-ghost lock-btn-full" id="lock-change-pw-btn">Change Password</button>
-        <button class="lock-btn lock-btn-danger lock-btn-full" id="lock-disable-btn">Disable Lock</button>
-      </div>
-
-      <div class="lock-dialog-actions" style="margin-top:8px">
-        <button class="lock-btn lock-btn-primary" id="lock-manage-save-btn">Save</button>
-        <button class="lock-btn lock-btn-ghost" id="lock-manage-close-btn">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CHANGE PASSWORD DIALOG ── -->
-  <div id="lock-change-pw-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
-    <div class="lock-dialog">
-      <div class="lock-dialog-icon" aria-hidden="true">🔑</div>
-      <h2 class="lock-dialog-title">Change Password</h2>
-
-      <div class="lock-input-wrap">
-        <input type="password" id="lock-change-current" class="lock-input" placeholder="Current Password" autocomplete="current-password" />
-        <button type="button" class="lock-eye-btn" id="lock-change-eye1" aria-label="Show current password" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <div class="lock-input-wrap">
-        <input type="password" id="lock-change-new" class="lock-input" placeholder="New Password" autocomplete="new-password" />
-        <button type="button" class="lock-eye-btn" id="lock-change-eye2" aria-label="Show new password" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-      <div id="change-pw-requirements" class="password-requirements" aria-live="polite" style="display:none">
-        <ul class="pw-rules-list"></ul>
-        <div class="pw-strength-container">
-          <div class="pw-strength-meter">
-            <div class="pw-strength-segment"></div>
-            <div class="pw-strength-segment"></div>
-            <div class="pw-strength-segment"></div>
-            <div class="pw-strength-segment"></div>
-          </div>
-          <span class="pw-strength-label"></span>
-        </div>
-      </div>
-      <div class="lock-input-wrap">
-        <input type="password" id="lock-change-confirm" class="lock-input" placeholder="Confirm New Password" autocomplete="new-password" />
-        <button type="button" class="lock-eye-btn" id="lock-change-eye3" aria-label="Show confirm password" tabindex="-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-
-      <p class="lock-error" id="lock-change-error" style="display:none"></p>
-      <div class="lock-dialog-actions">
-        <button class="lock-btn lock-btn-ghost" id="lock-change-cancel-btn">Cancel</button>
-        <button class="lock-btn lock-btn-primary" id="lock-change-confirm-btn">Change Password</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ── UNIVERSAL BLOCKER DIALOG ── -->
   <div id="ub-add-overlay" class="lock-overlay" role="dialog" aria-modal="true" style="display:none">
@@ -493,13 +398,36 @@
       </div>
       
       <div class="ub-input-group" style="margin-top: 15px;">
-        <label for="ub-type-select" class="ub-label">Match Type</label>
-        <select id="ub-type-select" class="ub-select">
-          <option value="domain">Domain (includes subdomains)</option>
-          <option value="path">Path (e.g. twitter.com/explore)</option>
-          <option value="exact">Exact URL</option>
-          <option value="wildcard">Wildcard (e.g. *.news.com/*)</option>
-        </select>
+        <div class="ub-label-row">
+          <label for="ub-type-select" class="ub-label">Match Type</label>
+          <div class="ub-tooltip-wrap">
+            <button type="button" class="ub-tooltip-trigger" aria-label="Match type help" tabindex="0">?</button>
+            <div class="ub-tooltip-card" role="tooltip">
+              <div class="ub-tooltip-title">Match Types Explained</div>
+              <ul class="ub-tooltip-list">
+                <li><strong>Domain:</strong> Blocks the entire website & all sub-pages (e.g. <code>reddit.com</code>)</li>
+                <li><strong>Path:</strong> Blocks specific sections, like feeds (e.g. <code>x.com/explore</code>)</li>
+                <li><strong>Exact URL:</strong> Blocks only 1 specific web address</li>
+                <li><strong>Wildcard:</strong> Uses <code>*</code> to match dynamic URL patterns (e.g. <code>*.news.com/*</code>)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="custom-select" id="ub-type-custom-select">
+          <input type="hidden" id="ub-type-select" value="domain" />
+          <button type="button" class="custom-select-trigger" id="ub-type-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="custom-select-label" id="ub-type-label">Domain</span>
+            <svg class="custom-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="custom-select-options" id="ub-type-options" role="listbox" style="display:none;">
+            <div class="custom-option selected" data-value="domain" role="option" aria-selected="true">Domain</div>
+            <div class="custom-option" data-value="path" role="option">Path</div>
+            <div class="custom-option" data-value="exact" role="option">Exact URL</div>
+            <div class="custom-option" data-value="wildcard" role="option">Wildcard</div>
+          </div>
+        </div>
       </div>
 
       <p class="lock-error" id="ub-rule-error" style="display:none"></p>

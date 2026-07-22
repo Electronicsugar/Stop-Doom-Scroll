@@ -294,11 +294,9 @@ async function loadLockStatus() {
     const status = await api.runtime.sendMessage({ type: MSG.LOCK_GET_STATUS });
     lockIsEnabled = status?.enabled ?? false;
     lockIsAuthenticated = status?.isAuthenticated ?? false;
-    lockUnlockDelay = status?.unlockDelay ?? 0;
+    lockUnlockDelay = 10;
     applyLockUI();
     applyProtectedSettings();
-    // Sync radio buttons to current delay
-    syncDelayRadios(lockUnlockDelay);
   } catch (err) {
     console.warn('[FocusGuard Lock] Failed to load lock status:', err);
   }
@@ -308,11 +306,7 @@ async function loadLockStatus() {
  * Reflects the lock enabled/disabled state in the Security section UI.
  */
 function applyLockUI() {
-  lockEnabled.checked = lockIsEnabled;
-  if (lockManageRow) lockManageRow.style.display = lockIsEnabled ? '' : 'none';
-  if (lockStatusText) {
-    lockStatusText.textContent = lockIsAuthenticated ? 'Enabled · Unlocked' : 'Enabled';
-  }
+  if (lockEnabled) lockEnabled.checked = lockIsEnabled;
 }
 
 /**
@@ -376,7 +370,15 @@ lockEnabled.addEventListener('change', async () => {
   } else if (!lockEnabled.checked && lockIsEnabled) {
     // User is disabling the lock — require authentication
     lockEnabled.checked = true; // revert until authenticated
-    pendingUnlockAction = () => disableLock();
+    pendingUnlockAction = async () => {
+      await api.runtime.sendMessage({ type: MSG.LOCK_DISABLE });
+      lockIsEnabled = false;
+      lockIsAuthenticated = false;
+      if (lockEnabled) lockEnabled.checked = false;
+      applyLockUI();
+      applyProtectedSettings();
+      showSaveIndicator();
+    };
     startUnlockFlow();
   }
 });
@@ -460,16 +462,10 @@ setupEyeToggle('lock-setup-eye2', 'lock-setup-confirm');
 // ── Unlock Flow ───────────────────────────────────────────────────────────────
 
 /**
- * Starts the unlock flow:
- * 1. If unlock delay > 0: show countdown overlay first, then show password dialog.
- * 2. Otherwise: show password dialog directly.
+ * Starts the unlock flow: shows the password unlock dialog.
  */
 function startUnlockFlow() {
-  if (lockUnlockDelay > 0) {
-    showDelayCountdown(lockUnlockDelay, () => showUnlockDialog());
-  } else {
-    showUnlockDialog();
-  }
+  showUnlockDialog();
 }
 
 function showUnlockDialog() {
@@ -501,12 +497,12 @@ document.getElementById('lock-unlock-confirm-btn')?.addEventListener('click', as
     if (res?.success) {
       lockIsAuthenticated = true;
       hideOverlay('lock-unlock-overlay');
-      applyLockUI();
-      applyProtectedSettings();
-      // Execute the pending action (the setting change the user wanted)
       if (pendingUnlockAction) {
-        pendingUnlockAction();
+        await pendingUnlockAction();
         pendingUnlockAction = null;
+      } else {
+        applyLockUI();
+        applyProtectedSettings();
       }
     } else if (res?.locked) {
       // Lockout active
@@ -558,192 +554,7 @@ function startCooldownDisplay(el, remainingMs) {
   }, 1000);
 }
 
-// ── Unlock Delay Countdown Overlay ───────────────────────────────────────────
 
-/**
- * Shows the delay countdown overlay, then calls onComplete when done.
- * Cancelling clears the timer and discards the pending action.
- */
-function showDelayCountdown(seconds, onComplete) {
-  let remaining = seconds;
-  const countdownEl = document.getElementById('lock-delay-countdown');
-  if (countdownEl) countdownEl.textContent = remaining;
-  showOverlay('lock-delay-overlay');
-
-  delayIntervalHandle = setInterval(() => {
-    remaining--;
-    if (countdownEl) countdownEl.textContent = remaining;
-    if (remaining <= 0) {
-      clearInterval(delayIntervalHandle);
-      delayIntervalHandle = null;
-      hideOverlay('lock-delay-overlay');
-      onComplete();
-    }
-  }, 1000);
-}
-
-document.getElementById('lock-delay-cancel-btn')?.addEventListener('click', () => {
-  if (delayIntervalHandle) {
-    clearInterval(delayIntervalHandle);
-    delayIntervalHandle = null;
-  }
-  pendingUnlockAction = null;
-  hideOverlay('lock-delay-overlay');
-});
-
-// ── Manage Dialog ─────────────────────────────────────────────────────────────
-
-lockManageBtn?.addEventListener('click', () => {
-  // Clear password field each time
-  const pw = document.getElementById('lock-manage-password');
-  const errEl = document.getElementById('lock-manage-error');
-  if (pw) pw.value = '';
-  if (errEl) errEl.style.display = 'none';
-  syncDelayRadios(lockUnlockDelay);
-  showOverlay('lock-manage-overlay');
-});
-
-// Manage: Save (delay update requires active auth session)
-document.getElementById('lock-manage-save-btn')?.addEventListener('click', async () => {
-  const selectedDelay = parseInt(
-    document.querySelector('input[name="unlock-delay"]:checked')?.value || '0', 10
-  );
-  try {
-    const res = await api.runtime.sendMessage({
-      type: MSG.LOCK_UPDATE_DELAY,
-      delaySeconds: selectedDelay,
-    });
-    if (res?.success) {
-      lockUnlockDelay = selectedDelay;
-      hideOverlay('lock-manage-overlay');
-      showSaveIndicator();
-    } else {
-      // Not authenticated — need to verify before saving delay
-      const errEl = document.getElementById('lock-manage-error');
-      showLockError(errEl, 'Please verify your password first.');
-    }
-  } catch {
-    const errEl = document.getElementById('lock-manage-error');
-    showLockError(errEl, 'Something went wrong.');
-  }
-});
-
-// Manage: Close
-document.getElementById('lock-manage-close-btn')?.addEventListener('click', () => {
-  hideOverlay('lock-manage-overlay');
-});
-
-// Manage: Disable Lock
-document.getElementById('lock-disable-btn')?.addEventListener('click', async () => {
-  const pw = document.getElementById('lock-manage-password')?.value;
-  const errEl = document.getElementById('lock-manage-error');
-  if (!pw) {
-    showLockError(errEl, 'Please enter your password to disable the lock.');
-    return;
-  }
-  await disableLockWithPassword(pw, errEl);
-});
-
-// Manage: Change Password — opens the change-password dialog
-document.getElementById('lock-change-pw-btn')?.addEventListener('click', () => {
-  const c1 = document.getElementById('lock-change-current');
-  const c2 = document.getElementById('lock-change-new');
-  const c3 = document.getElementById('lock-change-confirm');
-  const errEl = document.getElementById('lock-change-error');
-  if (c1) c1.value = '';
-  if (c2) c2.value = '';
-  if (c3) c3.value = '';
-  if (errEl) errEl.style.display = 'none';
-  hideOverlay('lock-manage-overlay');
-  showOverlay('lock-change-pw-overlay');
-});
-
-setupEyeToggle('lock-manage-eye', 'lock-manage-password');
-
-// ── Disable Lock ──────────────────────────────────────────────────────────────
-
-async function disableLock() {
-  // This is called when unlocking via the main toggle — user already authenticated.
-  // We still require the password from the manage dialog.
-  // Open manage dialog to confirm.
-  pendingUnlockAction = null;
-  lockManageBtn?.click();
-}
-
-async function disableLockWithPassword(password, errEl) {
-  try {
-    const res = await api.runtime.sendMessage({ type: MSG.LOCK_DISABLE, password });
-    if (res?.success) {
-      lockIsEnabled = false;
-      lockIsAuthenticated = false;
-      hideOverlay('lock-manage-overlay');
-      applyLockUI();
-      applyProtectedSettings();
-      showSaveIndicator();
-    } else if (res?.locked) {
-      startCooldownDisplay(errEl, res.lockoutRemainingMs);
-    } else {
-      showLockError(errEl, 'Incorrect password.');
-    }
-  } catch {
-    showLockError(errEl, 'Something went wrong.');
-  }
-}
-
-// ── Change Password Dialog ────────────────────────────────────────────────────
-
-document.getElementById('lock-change-cancel-btn')?.addEventListener('click', () => {
-  hideOverlay('lock-change-pw-overlay');
-  showOverlay('lock-manage-overlay');
-});
-
-document.getElementById('lock-change-confirm-btn')?.addEventListener('click', async () => {
-  const current = document.getElementById('lock-change-current')?.value;
-  const newPw   = document.getElementById('lock-change-new')?.value;
-  const confirm = document.getElementById('lock-change-confirm')?.value;
-  const errEl   = document.getElementById('lock-change-error');
-
-  if (!current || !newPw || !confirm) {
-    showLockError(errEl, 'All fields are required.');
-    return;
-  }
-  const val = validatePassword(newPw);
-  if (!val.isValid) {
-    const failedRule = val.ruleStatus.find(r => r.required && !r.passed);
-    if (failedRule) {
-      showLockError(errEl, `Missing requirement: ${failedRule.label}`);
-    } else {
-      showLockError(errEl, 'Please choose a stronger password.');
-    }
-    document.getElementById('lock-change-new')?.focus();
-    return;
-  }
-  if (newPw !== confirm) {
-    showLockError(errEl, 'The entries do not match. Please try again.');
-    return;
-  }
-
-  try {
-    const res = await api.runtime.sendMessage({
-      type: MSG.LOCK_CHANGE_PASSWORD,
-      currentPassword: current,
-      newPassword: newPw,
-    });
-    if (res?.success) {
-      hideOverlay('lock-change-pw-overlay');
-      showSaveIndicator();
-    } else {
-      // Generic message — don't reveal which field was wrong
-      showLockError(errEl, 'Could not change password. Please try again.');
-    }
-  } catch {
-    showLockError(errEl, 'Something went wrong.');
-  }
-});
-
-setupEyeToggle('lock-change-eye1', 'lock-change-current');
-setupEyeToggle('lock-change-eye2', 'lock-change-new');
-setupEyeToggle('lock-change-eye3', 'lock-change-confirm');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -791,21 +602,7 @@ function setupEyeToggle(btnId, inputId) {
   });
 }
 
-/**
- * Syncs the unlock-delay radio buttons to the current delay value.
- * @param {number} delaySeconds
- */
-function syncDelayRadios(delaySeconds) {
-  const radios = document.querySelectorAll('input[name="unlock-delay"]');
-  radios.forEach(r => {
-    r.checked = parseInt(r.value, 10) === delaySeconds;
-  });
-  // Default to "Off" if none match
-  if (![...radios].some(r => r.checked)) {
-    const offRadio = document.getElementById('delay-off');
-    if (offRadio) offRadio.checked = true;
-  }
-}
+
 
 // ── Back button ──────────────────────────────────────────────────────────────
 
@@ -888,7 +685,7 @@ async function loadBlockedRules() {
   ubRulesList.innerHTML = '';
   
   if (rules.length === 0) {
-    ubRulesList.innerHTML = '<div style="padding:15px; color:var(--text-muted); text-align:center;">No custom rules added yet.</div>';
+    ubRulesList.innerHTML = '<div style="padding:15px; color:var(--ink-muted); text-align:center; font-size:13px;">No custom rules added yet.</div>';
     return;
   }
   
@@ -902,11 +699,20 @@ async function loadBlockedRules() {
       </div>
       <div class="ub-rule-actions">
         <button class="ub-delete-btn" data-id="${rule.id}" aria-label="Delete rule" title="Delete">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
         </button>
       </div>
     `;
     item.querySelector('.ub-delete-btn').addEventListener('click', async () => {
+      if (lockIsEnabled && !lockIsAuthenticated) {
+        pendingUnlockAction = async () => {
+          await deleteBlockedUrl(rule.id);
+          loadBlockedRules();
+          showSaveIndicator();
+        };
+        startUnlockFlow();
+        return;
+      }
       await deleteBlockedUrl(rule.id);
       loadBlockedRules();
       showSaveIndicator();
@@ -915,15 +721,87 @@ async function loadBlockedRules() {
   });
 }
 
+// ── Custom Select UI Wiring ─────────────────────────────────────────
+const ubCustomSelect = document.getElementById('ub-type-custom-select');
+const ubTypeTrigger = document.getElementById('ub-type-trigger');
+const ubTypeLabel   = document.getElementById('ub-type-label');
+const ubTypeOptions = document.getElementById('ub-type-options');
+
+function setCustomSelectValue(val) {
+  if (!ubTypeSelect) return;
+  ubTypeSelect.value = val;
+  const options = ubTypeOptions?.querySelectorAll('.custom-option');
+  options?.forEach(opt => {
+    const isSel = opt.dataset.value === val;
+    opt.classList.toggle('selected', isSel);
+    opt.setAttribute('aria-selected', isSel ? 'true' : 'false');
+    if (isSel && ubTypeLabel) {
+      ubTypeLabel.textContent = opt.textContent.trim();
+    }
+  });
+}
+
+if (ubTypeTrigger && ubTypeOptions) {
+  ubTypeTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = ubCustomSelect.classList.contains('open');
+    if (isOpen) {
+      ubCustomSelect.classList.remove('open');
+      ubTypeOptions.style.display = 'none';
+      ubTypeTrigger.setAttribute('aria-expanded', 'false');
+    } else {
+      ubCustomSelect.classList.add('open');
+      ubTypeOptions.style.display = 'flex';
+      ubTypeTrigger.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  ubTypeOptions.querySelectorAll('.custom-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const val = opt.dataset.value;
+      setCustomSelectValue(val);
+      ubCustomSelect.classList.remove('open');
+      ubTypeOptions.style.display = 'none';
+      ubTypeTrigger.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (ubCustomSelect && !ubCustomSelect.contains(e.target)) {
+      ubCustomSelect.classList.remove('open');
+      ubTypeOptions.style.display = 'none';
+      ubTypeTrigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 if (ubAddRuleBtn) {
   ubAddRuleBtn.addEventListener('click', () => {
+    if (lockIsEnabled && !lockIsAuthenticated) {
+      pendingUnlockAction = () => {
+        ubPatternInput.value = '';
+        setCustomSelectValue('domain');
+        ubRuleError.style.display = 'none';
+        showOverlay('ub-add-overlay');
+      };
+      startUnlockFlow();
+      return;
+    }
     ubPatternInput.value = '';
-    ubTypeSelect.value = 'domain';
+    setCustomSelectValue('domain');
     ubRuleError.style.display = 'none';
     showOverlay('ub-add-overlay');
   });
 
   ubCancelBtn.addEventListener('click', () => hideOverlay('ub-add-overlay'));
+
+  ubPatternInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ubSaveBtn?.click();
+    }
+  });
 
   ubSaveBtn.addEventListener('click', async () => {
     const pattern = ubPatternInput.value.trim();
@@ -954,3 +832,4 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   loadBlockedRules();
 });
+

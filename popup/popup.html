@@ -80,7 +80,7 @@
         <div class="todo-section">
           <ul class="todo-list" id="todo-list"></ul>
           <div class="todo-empty" id="todo-empty">
-            <p>No tasks yet. Add one above! ✨</p>
+            <p>No tasks yet. Add one above!</p>
           </div>
         </div>
       </section>
@@ -100,25 +100,26 @@
 
         <div class="focus-body">
           <div class="focus-timer-block">
-            <div class="focus-timer-row">
+            <!-- Separate DIV 1: Timer & Sublabel -->
+            <div class="focus-timer-container">
               <div class="focus-timer" id="focus-timer-display">00:00:00</div>
-              
-              <!-- Session Controls: Play/Pause, Stop -->
-              <div class="focus-controls" id="focus-controls">
-                <div class="focus-ctrl-row" id="focus-ctrl-primary">
-                  <button id="focus-play-pause-btn" class="fg-btn fg-btn-ghost fg-icon-only" aria-label="Pause focus session">
-                    <div class="icon-swap-container" id="play-pause-swap">
-                      <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                      <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    </div>
-                  </button>
-                  <button id="focus-stop-btn" class="fg-btn fg-btn-danger fg-icon-only" aria-label="End focus session">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-                  </button>
-                </div>
+              <div class="focus-timer-sub">Focused Time (since last break)</div>
+            </div>
+            
+            <!-- Separate DIV 2: Play/Pause & Stop Controls -->
+            <div class="focus-controls" id="focus-controls">
+              <div class="focus-ctrl-row" id="focus-ctrl-primary">
+                <button id="focus-play-pause-btn" class="fg-btn fg-btn-ghost fg-icon-only" aria-label="Pause focus session">
+                  <div class="icon-swap-container" id="play-pause-swap">
+                    <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  </div>
+                </button>
+                <button id="focus-stop-btn" class="fg-btn fg-btn-danger fg-icon-only" aria-label="End focus session">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+                </button>
               </div>
             </div>
-            <div class="focus-timer-sub">Focused Time (since last break)</div>
           </div>
           <!-- Decorative botanical -->
           <div class="focus-deco" aria-hidden="true">

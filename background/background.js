@@ -761,7 +761,12 @@ async function handleMessage(message, sender) {
       const tabId = sender.tab ? sender.tab.id : null;
       if (!tabId) return { blocked: false, matchedRule: null };
 
-      // Precedence: Temporary Allow > Whitelist (not separate here, just absent from rules) > Block Rules
+      // Precedence: Break active > Temporary Allow > Block Rules
+      const session = await getSession();
+      if (session.breakModeActive) {
+        return { blocked: false, matchedRule: null };
+      }
+
       const alarm = await api.alarms.get(`tempAllow_${tabId}`);
       if (alarm) {
         return { blocked: false, matchedRule: null };
@@ -876,8 +881,8 @@ async function handleMessage(message, sender) {
 
       api.alarms.create('fg_break_timer', { when: expiresAt });
 
-      // Unblock all relevant tabs
-      const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
+      // Unblock all open tabs (both platform-specific and universal blocker tabs)
+      const tabs = await api.tabs.query({});
       for (const tab of tabs) {
         safeSendToTab(tab.id, {
           type: MSG.UNBLOCK_PAGE,
@@ -950,7 +955,7 @@ async function handleMessage(message, sender) {
       });
       api.alarms.clear('fg_break_timer');
 
-      const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
+      const tabs = await api.tabs.query({});
       for (const tab of tabs) {
         safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
       }
@@ -1028,7 +1033,7 @@ async function handleMessage(message, sender) {
         enabled:        true,
         hash,
         salt,
-        unlockDelay:    0,
+        unlockDelay:    10,
         failedAttempts: 0,
         lockoutUntil:   0,
       });
@@ -1148,8 +1153,8 @@ api.alarms.onAlarm.addListener(async (alarm) => {
       accumulatedFocusMs: 0,
     });
 
-    // Notify all relevant tabs that break ended
-    const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
+    // Notify all open tabs that break ended
+    const tabs = await api.tabs.query({});
     for (const tab of tabs) {
       safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
     }
