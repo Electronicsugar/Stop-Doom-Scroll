@@ -197,7 +197,14 @@ input  { font-family: inherit; }
   padding: 13px 16px 12px;
   flex-shrink: 0;
 }
-.header-left { display: flex; align-items: center; gap: 8px; }
+.header-left { display: flex; align-items: center; gap: 7px; }
+.header-logo-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .header-badges { display: flex; gap: 5px; align-items: center; }
 
 .logo-mark {

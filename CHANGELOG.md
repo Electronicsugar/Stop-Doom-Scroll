@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+### Added
+- **Logo & Branding**: Redesigned official SAGE extension logo (Shield of Clarity aesthetic). Generated and tightly cropped icon set (`16x16`, `32x32`, `48x48`, `128x128`).
+- **UI Integration**: Added compact logo icon branding to popup header and settings header.
 
 ## v1.2.1 — 2026-07-23
 ### Fixed

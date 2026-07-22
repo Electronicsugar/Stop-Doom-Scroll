@@ -16,6 +16,7 @@
 - **Settings Lock**: Password protection for Settings page with instant direct unlock prompt on toggle off or edit.
 - **Auto-Chill Mode**: Automatic leisure detection — if no goals and no tasks exist when visiting a distracting site, chill mode activates. Deactivates when a goal is set or a task is added.
 - **Codebase Optimization & Deduplication**: Extracted shared design system tokens, keyframe animations, typography, resets, standard buttons, form inputs, modals, and custom scrollbars into `lib/common.css`. Standardized content script DOM hiding/restoring helpers across YouTube & Instagram, and removed dead script tags & orphan zip files.
+- **Logo & Branding**: Redesigned official SAGE extension logo (Shield of Clarity aesthetic), tightly cropped and generated crisp PNG icon set for all extension scales (`16x16`, `32x32`, `48x48`, `128x128`).
 - **Project Skills**: Dedicated `.agents/skills` for `version_control` and `commit` workflows.
 
 ## Features In Progress
@@ -29,7 +30,6 @@
 - **[FIXED]** Disabling Settings Lock didn't pass password to background, leaving lock enabled on refresh. Now verifies password, resets/clears password hash completely on toggle off, and applies specific pending toggle changes upon unlocking.
 
 ## Pending Tasks
-- **Icon Generation**: The current icons are duplicates of a single high-res image. Need to be properly resized to 16x16, 32x32, 48x48, 128x128 pixels.
 - **Firefox Testing**: Verify MV3 compatibility and storage behavior on Mozilla Firefox.
 - **Edge Cases**: Test rapid tab switching, browser restarts during active breaks, and single-page application (SPA) routing robustness.
 
@@ -38,4 +38,3 @@
 
 ## Next Recommended Tasks
 1. Load the extension manually into Chrome and verify all flows (Goal setting, YouTube blocking, Break timer, Auto-chill mode).
-2. Create properly sized icon files.

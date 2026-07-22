@@ -149,6 +149,20 @@ body {
   color: var(--accent);
 }
 
+.settings-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-logo-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .settings-title {
   font-size: 13px;
   font-weight: 700;
