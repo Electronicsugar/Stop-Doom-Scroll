@@ -13,9 +13,30 @@
   let overlayContainer = null;
   let shadowRoot = null;
 
+  // Safe sendMessage wrapper for cross-browser MV3 compatibility
+  async function safeSendMessage(payload) {
+    return new Promise((resolve) => {
+      try {
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage(payload, (res) => {
+            if (chrome.runtime.lastError) console.error('[FocusGuard] sendMessage error:', chrome.runtime.lastError);
+            resolve(res || null);
+          });
+        } else {
+          api.runtime.sendMessage(payload).then(resolve).catch(err => {
+            console.error('[FocusGuard] sendMessage error:', err);
+            resolve(null);
+          });
+        }
+      } catch (err) {
+        console.error('[FocusGuard] safeSendMessage exception:', err);
+        resolve(null);
+      }
+    });
+  }
+
   // ── 1. Initialize Hybrid Fast/Slow Path ─────────────────────────────────────
 
-  // Fast path: Load rules from storage and matcher via dynamic import
   async function initFastPath() {
     try {
       const src = api.runtime.getURL('lib/urlMatcher.js');
@@ -30,16 +51,13 @@
     }
   }
 
-  // Slow path: Ask background directly
-  function initSlowPath() {
-    api.runtime.sendMessage({ type: 'GET_BLOCK_STATUS', url: window.location.href }, (response) => {
-      if (api.runtime.lastError) return;
-      if (response && response.blocked) {
-        enforceBlock(response.matchedRule);
-      } else if (response && !response.blocked) {
-        removeBlock();
-      }
-    });
+  async function initSlowPath() {
+    const response = await safeSendMessage({ type: 'GET_BLOCK_STATUS', url: window.location.href });
+    if (response && response.blocked) {
+      enforceBlock(response.matchedRule);
+    } else if (response && !response.blocked) {
+      removeBlock();
+    }
   }
 
   initFastPath();
@@ -50,17 +68,15 @@
   function checkUrl(url, source) {
     if (!matcher || !cachedRules) return;
     
-    // We must re-hydrate the regex for wildcard rules when reading from storage locally
-    // because storage drops RegExp objects.
     const hydratedRules = cachedRules.map(r => {
-      if (r.type === 'wildcard' && !r.regex) {
-        return matcher.compileRule(r);
-      }
+      if (r.type === 'wildcard' && !r.regex) return matcher.compileRule(r);
       return r;
     });
 
     const matchedRule = matcher.isBlocked(url, hydratedRules);
     if (matchedRule) {
+      // In fast path, we must be careful: if temp allowed, fast path will falsely block.
+      // We rely on initSlowPath to immediately undo it if temp allowed.
       enforceBlock(matchedRule);
     } else {
       removeBlock();
@@ -73,7 +89,6 @@
     if (isCurrentlyBlocked) return;
     isCurrentlyBlocked = true;
 
-    // Suppress body scrolling/interaction without deleting it (preserves SPA state)
     if (document.documentElement) {
       document.documentElement.style.setProperty('overflow', 'hidden', 'important');
     }
@@ -93,7 +108,6 @@
       shadowRoot = overlayContainer.attachShadow({ mode: 'closed' });
       renderBlockScreen(matchedRule);
       
-      // Inject as early as possible
       if (document.body) {
         document.body.appendChild(overlayContainer);
       } else {
@@ -210,34 +224,46 @@
       <div class="rule-badge">Matched: ${rule ? rule.normalizedPattern : window.location.hostname}</div>
       <div class="btn-group">
         <button id="btn-back" class="primary">Go Back</button>
-        <button id="btn-allow-5">Temporarily Allow (5 min)</button>
-        <button id="btn-allow-15">Temporarily Allow (15 min)</button>
+        <button id="btn-allow-5" data-mins="5">Temporarily Allow (5 min)</button>
+        <button id="btn-allow-10" data-mins="10">Temporarily Allow (10 min)</button>
+        <button id="btn-whitelist">Whitelist Website</button>
       </div>
     `;
 
     shadowRoot.appendChild(style);
     shadowRoot.appendChild(container);
 
-    shadowRoot.getElementById('btn-back').addEventListener('click', () => {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = 'chrome://newtab/'; // Fallback
-      }
-    });
+    // Event Delegation for robustness
+    const btnGroup = shadowRoot.querySelector('.btn-group');
+    if (btnGroup) {
+      btnGroup.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
 
-    const allowTemp = (minutes) => {
-      api.runtime.sendMessage({ 
-        type: 'TEMP_ALLOW_URL', 
-        url: window.location.href, 
-        durationMs: minutes * 60000 
-      }, (res) => {
-        if (res && res.success) removeBlock();
+        if (btn.id === 'btn-back') {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = (typeof browser !== 'undefined') ? 'about:newtab' : 'chrome://newtab/';
+          }
+        } 
+        else if (btn.id.startsWith('btn-allow-')) {
+          const mins = parseInt(btn.dataset.mins, 10);
+          const res = await safeSendMessage({ 
+            type: 'TEMP_ALLOW_URL', 
+            url: window.location.href, 
+            durationMs: mins * 60000 
+          });
+          if (res && res.success) removeBlock();
+        }
+        else if (btn.id === 'btn-whitelist') {
+          if (rule && rule.id) {
+            const res = await safeSendMessage({ type: 'WHITELIST_RULE', ruleId: rule.id });
+            if (res && res.success) removeBlock();
+          }
+        }
       });
-    };
-
-    shadowRoot.getElementById('btn-allow-5').addEventListener('click', () => allowTemp(5));
-    shadowRoot.getElementById('btn-allow-15').addEventListener('click', () => allowTemp(15));
+    }
   }
 
   function trapFocus() {
@@ -256,35 +282,15 @@
   });
 
   api.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'BLOCKED_URLS_UPDATED') {
-      initSlowPath(); // Re-verify against background state (e.g. temp allow expired)
+    if (msg.type === 'BLOCKED_URLS_UPDATED' || msg.type === 'TEMP_ALLOW_STATE_CHANGED') {
+      initSlowPath(); 
     }
     if (msg.type === 'URL_CHANGED') {
+      // For URL changes, checking the fast path is fine, but if it blocks,
+      // initSlowPath will correct it if there's an active temp allow.
       checkUrl(msg.url || window.location.href, 'msg');
+      initSlowPath();
     }
   });
-
-  // Monitor SPA internal navigations
-  let lastUrl = window.location.href;
-  const observeUrlChange = () => {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
-      checkUrl(lastUrl, 'spa');
-    }
-  };
-
-  window.addEventListener('popstate', observeUrlChange);
-  
-  // Intercept pushState and replaceState
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-  history.pushState = function() {
-    originalPushState.apply(this, arguments);
-    observeUrlChange();
-  };
-  history.replaceState = function() {
-    originalReplaceState.apply(this, arguments);
-    observeUrlChange();
-  };
 
 })();

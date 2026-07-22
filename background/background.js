@@ -719,14 +719,14 @@ function revokeAuthSession() {
 // ============================================================
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  handleMessage(message).then(sendResponse).catch((err) => {
+  handleMessage(message, sender).then(sendResponse).catch((err) => {
     console.error('[FocusGuard] Message handler error:', err);
     sendResponse({ error: err.message });
   });
   return true; // Keep the message channel open for async response
 });
 
-async function handleMessage(message) {
+async function handleMessage(message, sender) {
   switch (message.type) {
 
     // ---- State queries ----
@@ -761,7 +761,7 @@ async function handleMessage(message) {
       const tabId = sender.tab ? sender.tab.id : null;
       if (!tabId) return { blocked: false, matchedRule: null };
 
-      // Check for temporary allow (tab-specific override)
+      // Precedence: Temporary Allow > Whitelist (not separate here, just absent from rules) > Block Rules
       const alarm = await api.alarms.get(`tempAllow_${tabId}`);
       if (alarm) {
         return { blocked: false, matchedRule: null };
@@ -779,9 +779,21 @@ async function handleMessage(message) {
       const tabId = sender.tab ? sender.tab.id : null;
       if (tabId && message.durationMs) {
         api.alarms.create(`tempAllow_${tabId}`, { delayInMinutes: message.durationMs / 60000 });
+        // Broadcast the state change to this specific tab so slow path re-evaluates
+        safeSendToTab(tabId, { type: 'TEMP_ALLOW_STATE_CHANGED' });
         return { success: true };
       }
       return { success: false, error: 'Invalid parameters or missing tab context' };
+    }
+
+    case 'WHITELIST_RULE': {
+      if (message.ruleId) {
+        const rules = await getCachedBlockedRules();
+        const updatedRules = rules.filter(r => r.id !== message.ruleId);
+        await api.storage.local.set({ fg_blocked_urls: updatedRules });
+        return { success: true };
+      }
+      return { success: false, error: 'Missing ruleId' };
     }
 
     case MSG.SKIP_GOAL: {
@@ -1120,3 +1132,52 @@ async function handleMessage(message) {
       return { error: `Unknown message type: ${message.type}` };
   }
 }
+ 
+// ============================================================
+//  ALARM MANAGER
+// ============================================================
+api.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'fg_break_timer') {
+    // Atomically clear break state and start a new focus session.
+    // focusStartedAt is set to NOW so the popup timer resets to 00:00:00.
+    await updateSession({
+      breakModeActive:    false,
+      breakExpiresAt:     null,
+      sessionState:       'FOCUSING',
+      focusStartedAt:     Date.now(),
+      accumulatedFocusMs: 0,
+    });
+
+    // Notify all relevant tabs that break ended
+    const tabs = await api.tabs.query({ url: ["*://*.youtube.com/*", "*://*.instagram.com/*"] });
+    for (const tab of tabs) {
+      safeSendToTab(tab.id, { type: MSG.BREAK_ENDED });
+    }
+  } else if (alarm.name.startsWith('tempAllow_')) {
+    const tabId = parseInt(alarm.name.split('_')[1], 10);
+    if (!isNaN(tabId)) {
+      safeSendToTab(tabId, { type: 'TEMP_ALLOW_STATE_CHANGED' });
+    }
+  } else if (alarm.name === 'fg_chill_reminder') {
+    const session = await getSession();
+    if (!session.chillModeActive) return;
+
+    const settings = await getSettings();
+    if (!settings.focusReminderEnabled) return;
+
+    // Set pending so any future checks block them
+    await updateSession({ chillReminderPending: true });
+
+    // Show on the current active tab if it's a blocked site
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    if (tabs && tabs[0] && tabs[0].url) {
+      const url = tabs[0].url;
+      if (url.includes('youtube.com') || url.includes('instagram.com')) {
+        safeSendToTab(tabs[0].id, {
+          type: MSG.SHOW_CHILL_REMINDER,
+          reminderInterval: settings.reminderInterval
+        });
+      }
+    }
+  }
+});
