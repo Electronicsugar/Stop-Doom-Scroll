@@ -10,7 +10,7 @@ Maintain a persistent release history for Sage. Every modification must be recor
 
 ## Rules
 
-1. **Record Every Change**: After any code modification, append a one-line summary under the `## Unreleased` section of `CHANGELOG.md`. Categorise as `Added`, `Changed`, `Fixed`, or `Removed`.
+1. **Record Every Change**: Append a ultra-concise 1-line summary under `## Unreleased` in `CHANGELOG.md`. Keep bullet points very short (3-8 words max) so the log stays clean. Categorise as `Added`, `Changed`, `Fixed`, or `Removed`.
 
 2. **Version Source of Truth**: The canonical version lives in `manifest.json` → `"version"`. All other references (docs, footers) must match it.
 
