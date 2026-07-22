@@ -368,16 +368,21 @@ lockEnabled.addEventListener('change', async () => {
     lockEnabled.checked = false; // revert until setup completes
     showSetupDialog();
   } else if (!lockEnabled.checked && lockIsEnabled) {
-    // User is disabling the lock — require authentication
+    // User is disabling the lock — require authentication to disable & reset password
     lockEnabled.checked = true; // revert until authenticated
-    pendingUnlockAction = async () => {
-      await api.runtime.sendMessage({ type: MSG.LOCK_DISABLE });
-      lockIsEnabled = false;
-      lockIsAuthenticated = false;
-      if (lockEnabled) lockEnabled.checked = false;
-      applyLockUI();
-      applyProtectedSettings();
-      showSaveIndicator();
+    pendingUnlockAction = async (enteredPassword) => {
+      const res = await api.runtime.sendMessage({
+        type: MSG.LOCK_DISABLE,
+        password: enteredPassword
+      });
+      if (res && res.success) {
+        lockIsEnabled = false;
+        lockIsAuthenticated = false;
+        if (lockEnabled) lockEnabled.checked = false;
+        applyLockUI();
+        applyProtectedSettings();
+        showSaveIndicator();
+      }
     };
     startUnlockFlow();
   }
@@ -497,13 +502,15 @@ document.getElementById('lock-unlock-confirm-btn')?.addEventListener('click', as
     if (res?.success) {
       lockIsAuthenticated = true;
       hideOverlay('lock-unlock-overlay');
+
       if (pendingUnlockAction) {
-        await pendingUnlockAction();
+        const action = pendingUnlockAction;
         pendingUnlockAction = null;
-      } else {
-        applyLockUI();
-        applyProtectedSettings();
+        await action(pw);
       }
+
+      applyLockUI();
+      applyProtectedSettings();
     } else if (res?.locked) {
       // Lockout active
       if (errEl) errEl.style.display = 'none';

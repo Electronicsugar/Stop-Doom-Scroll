@@ -48,3 +48,12 @@
 - **Chosen solution**: Automatic detection. If `sessionGoal` is null and there are no active (uncompleted) todos, the first visit to a blocked page auto-enables chill mode.
 - **Reasoning**: The user's intent is clear — if they have nothing to work on and go straight to leisure content, blocking them adds no value. Auto-detection eliminates unnecessary friction. Chill mode is disabled the moment a goal is set or a task is added, restoring blocking immediately.
 - **Tradeoffs**: A user who *intended* to work but forgot to set a goal will not be blocked until they add a goal or task. This is acceptable because the extension's philosophy is "not a full blocker" — it only intervenes when there is a clear work context.
+
+## 7. Unified Design System & Common Module Consolidation
+- **Problem**: How to reduce CSS/JS redundancy and file bloat across popup, settings, and content scripts before production release.
+- **Options considered**:
+  - Keep separate CSS/JS per page with duplicated tokens and rules.
+  - Create a unified `lib/common.css` and export shared DOM helpers in `content-common.js`.
+- **Chosen solution**: Centralized design system stylesheet (`lib/common.css`) and shared DOM helpers on `window.__FG`.
+- **Reasoning**: Cuts CSS code volume by ~50%, standardizes color tokens, keyframe animations, typography, resets, button components, form controls, and custom scrollbars across all pages, while maintaining fast load times without any external bundlers.
+

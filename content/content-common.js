@@ -469,6 +469,29 @@
     }
   }
 
+  function _hideElement(el) {
+    if (el.dataset.fgHidden === 'true') return;
+    el.dataset.fgDisplay = el.style.display;
+    el.dataset.fgHidden = 'true';
+    el.style.display = 'none';
+  }
+
+  function hideFeedElements(selectors, root) {
+    const scope = root || document;
+    if (!selectors || selectors.length === 0) return;
+    try {
+      scope.querySelectorAll(selectors.join(', ')).forEach(_hideElement);
+    } catch (e) {}
+  }
+
+  function restoreFeedElements() {
+    document.querySelectorAll('[data-fg-hidden="true"]').forEach((el) => {
+      el.style.display = el.dataset.fgDisplay || '';
+      delete el.dataset.fgHidden;
+      delete el.dataset.fgDisplay;
+    });
+  }
+
   // Export to global scope for site-specific scripts
   window.__FG = {
     MSG: FG_MSG,
@@ -477,6 +500,9 @@
     injectOverlay: fgInjectOverlay,
     removeOverlay: fgRemoveOverlay,
     checkAndBlock: fgCheckAndBlock,
+    _hideElement: _hideElement,
+    hideFeedElements: hideFeedElements,
+    restoreFeedElements: restoreFeedElements,
     UI: FGUI
   };
 })();

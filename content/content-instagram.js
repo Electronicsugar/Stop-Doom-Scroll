@@ -184,41 +184,9 @@
   //  — restore exact inline display on teardown
   // ============================================================
 
-  function _hideElement(el) {
-    if (el.dataset.fgHidden === 'true') return;
-    el.dataset.fgDisplay = el.style.display;
-    el.dataset.fgHidden = 'true';
-    el.style.display = 'none';
-  }
-
-  /**
-   * Hides all elements matching any selector within root (default: document).
-   * Safe to call repeatedly — already-hidden nodes are skipped.
-   *
-   * @param {string[]} selectors
-   * @param {Element|Document} [root=document]
-   */
-  function hideFeedElements(selectors, root) {
-    const scope = root || document;
-    if (!selectors || selectors.length === 0) return;
-    try {
-      scope.querySelectorAll(selectors.join(', ')).forEach(_hideElement);
-    } catch (e) {
-      // Ignore invalid selectors (browser-version CSS differences)
-    }
-  }
-
-  /**
-   * Restores all elements hidden by FocusGuard.
-   * Uses data-fg-display to restore the exact prior inline display value.
-   */
-  function restoreFeedElements() {
-    document.querySelectorAll('[data-fg-hidden="true"]').forEach((el) => {
-      el.style.display = el.dataset.fgDisplay || '';
-      delete el.dataset.fgHidden;
-      delete el.dataset.fgDisplay;
-    });
-  }
+  const _hideElement = FG._hideElement;
+  const hideFeedElements = FG.hideFeedElements;
+  const restoreFeedElements = FG.restoreFeedElements;
 
   // ============================================================
   //  FOCUS CARD

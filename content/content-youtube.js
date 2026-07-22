@@ -105,43 +105,9 @@
    * Stores the element's current inline display value in data-fg-display
    * so it can be restored exactly. Skips already-hidden elements.
    */
-  function _hideElement(el) {
-    if (el.dataset.fgHidden === 'true') return; // Already hidden — skip
-    el.dataset.fgDisplay = el.style.display;    // Store inline display (may be '')
-    el.dataset.fgHidden = 'true';
-    el.style.display = 'none';
-  }
-
-  /**
-   * Hides all elements matching any of the provided selectors within root.
-   * Safe to call repeatedly — already-hidden nodes are skipped via data-fg-hidden.
-   *
-   * @param {string[]} selectors - CSS selectors for recommendation containers
-   * @param {Element|Document} [root=document] - Scope the query to this subtree
-   */
-  function hideFeedElements(selectors, root) {
-    const scope = root || document;
-    if (!selectors || selectors.length === 0) return;
-    try {
-      scope.querySelectorAll(selectors.join(', ')).forEach(_hideElement);
-    } catch (e) {
-      // Ignore selectors unsupported by the current browser version
-    }
-  }
-
-  /**
-   * Restores all elements previously hidden by FocusGuard.
-   * Uses the stored data-fg-display value to restore the exact inline
-   * display rather than blindly setting '' (which would override
-   * any pre-existing inline display style the page had set).
-   */
-  function restoreFeedElements() {
-    document.querySelectorAll('[data-fg-hidden="true"]').forEach((el) => {
-      el.style.display = el.dataset.fgDisplay || ''; // Restore exact prior value
-      delete el.dataset.fgHidden;
-      delete el.dataset.fgDisplay;
-    });
-  }
+  const _hideElement = FG._hideElement;
+  const hideFeedElements = FG.hideFeedElements;
+  const restoreFeedElements = FG.restoreFeedElements;
 
   // ============================================================
   //  FOCUS CARD
